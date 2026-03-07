@@ -727,3 +727,21 @@ footer {
         display: none; /* simple hidden on mobile for demo */
     }
 }
+
+.lang-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--text-main);
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.3s;
+    margin-left: 10px;
+}
+
+.lang-btn:hover {
+    border-color: var(--primary-red);
+    color: var(--primary-red);
+}
