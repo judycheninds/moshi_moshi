@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('Initializing MoshiMoshi AI Agent...', 'system');
 
         // Connect to our real Twilio + Gemini Node.js server!
-        fetch('http://localhost:3000/api/real-call', {
+        fetch('https://moshi-moshi-8dh6.onrender.com/api/real-call', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone, userPhone, date, time, people })
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Trigger the SMS Confirmation 
             if (userPhone) {
-                fetch('http://localhost:3000/api/send-sms', {
+                fetch('https://moshi-moshi-8dh6.onrender.com/api/send-sms', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userPhone, date: dateStr, time, people })
