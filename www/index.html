@@ -34,10 +34,11 @@
                     class="jp-logo">もしもし</span>
             </a>
             <div class="nav-links">
-                <a href="#how-it-works">How it Works</a>
-                <a href="#reservation">Make Reservation</a>
-                <button class="btn-primary login-btn" id="loginBtn"><span>Login / Sign Up</span> <i
-                        class="fa-solid fa-arrow-right-to-bracket"></i></button>
+                <a href="#how-it-works" data-i18n="nav-how">How it Works</a>
+                <a href="#reservation" data-i18n="nav-reserve">Make Reservation</a>
+                <button class="btn-primary login-btn" id="loginBtn"><span data-i18n="nav-login">Login / Sign Up</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i></button>
+                <button id="langToggleBtn" class="lang-btn">中(繁)</button>
             </div>
         </div>
     </nav>
@@ -48,10 +49,11 @@
         <section class="hero">
             <div class="container hero-content">
                 <div class="hero-text glass-panel">
-                    <h1>Your Personal Bilingual Concierge</h1>
-                    <p class="subtitle">Our AI calls Japanese restaurants, speaks fluent Japanese, and secures your
+                    <h1 data-i18n="hero-title">Your Personal Bilingual Concierge</h1>
+                    <p class="subtitle" data-i18n="hero-sub">Our AI calls Japanese restaurants, speaks fluent Japanese,
+                        and secures your
                         table. Never worry about language barriers again.</p>
-                    <a href="#reservation" class="btn-primary cta-btn">Start Calling Now</a>
+                    <a href="#reservation" class="btn-primary cta-btn" data-i18n="hero-btn">Start Calling Now</a>
                 </div>
             </div>
         </section>
@@ -62,34 +64,41 @@
                 <div class="reservation-wrapper">
                     <!-- Left: Form -->
                     <div class="form-panel glass-panel">
-                        <h2><i class="fa-solid fa-utensils"></i> Reservation Details</h2>
-                        <p class="form-desc">Provide the restaurant's details and we'll handle the call.</p>
+                        <h2><i class="fa-solid fa-utensils"></i> <span data-i18n="form-title">Reservation Details</span>
+                        </h2>
+                        <p class="form-desc" data-i18n="form-desc">Provide the restaurant's details and we'll handle the
+                            call.</p>
 
                         <form id="reservationForm">
                             <div class="form-group">
-                                <label for="userPhone"><i class="fa-solid fa-mobile-screen"></i> Your Phone Number (For
-                                    SMS Confirmation)</label>
+                                <label for="userPhone"><i class="fa-solid fa-mobile-screen"></i> <span
+                                        data-i18n="label-userPhone">Your Phone Number (For
+                                        SMS Confirmation)</span></label>
                                 <input type="tel" id="userPhone" placeholder="+1 555-XXXX-XXXX" required>
                             </div>
 
                             <div class="form-group">
-                                <label for="phone"><i class="fa-solid fa-phone"></i> Restaurant Phone Number</label>
+                                <label for="phone"><i class="fa-solid fa-phone"></i> <span
+                                        data-i18n="label-phone">Restaurant Phone Number</span></label>
                                 <input type="tel" id="phone" placeholder="+81 3-XXXX-XXXX" required>
                             </div>
 
                             <div class="row">
                                 <div class="form-group half">
-                                    <label for="date"><i class="fa-regular fa-calendar"></i> Date</label>
+                                    <label for="date"><i class="fa-regular fa-calendar"></i> <span
+                                            data-i18n="label-date">Date</span></label>
                                     <input type="date" id="date" required>
                                 </div>
                                 <div class="form-group half">
-                                    <label for="time"><i class="fa-regular fa-clock"></i> Time</label>
+                                    <label for="time"><i class="fa-regular fa-clock"></i> <span
+                                            data-i18n="label-time">Time</span></label>
                                     <input type="time" id="time" required>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="people"><i class="fa-solid fa-users"></i> Number of People</label>
+                                <label for="people"><i class="fa-solid fa-users"></i> <span
+                                        data-i18n="label-people">Number of People</span></label>
                                 <div class="counter-input">
                                     <button type="button" id="minusBtn" class="counter-btn"><i
                                             class="fa-solid fa-minus"></i></button>
@@ -101,33 +110,35 @@
 
                             <div class="form-separator"></div>
 
-                            <h3><i class="fa-regular fa-credit-card"></i> Deposit Method</h3>
-                            <p class="small-text text-muted">A credit card is required. Some premium Japanese
+                            <h3><i class="fa-regular fa-credit-card"></i> <span data-i18n="deposit-title">Deposit
+                                    Method</span></h3>
+                            <p class="small-text text-muted" data-i18n="deposit-desc">A credit card is required. Some
+                                premium Japanese
                                 restaurants mandate a deposit. You will only be charged if the restaurant requests it.
                             </p>
 
                             <div class="form-group">
-                                <label for="cc-name">Cardholder Name</label>
+                                <label for="cc-name" data-i18n="label-cc-name">Cardholder Name</label>
                                 <input type="text" id="cc-name" placeholder="John Doe" required>
                             </div>
                             <div class="form-group">
-                                <label for="cc-number">Card Number</label>
+                                <label for="cc-number" data-i18n="label-cc-number">Card Number</label>
                                 <input type="text" id="cc-number" placeholder="0000 0000 0000 0000" maxlength="19"
                                     required>
                             </div>
                             <div class="row">
                                 <div class="form-group half">
-                                    <label for="cc-exp">Expiry (MM/YY)</label>
+                                    <label for="cc-exp" data-i18n="label-cc-exp">Expiry (MM/YY)</label>
                                     <input type="text" id="cc-exp" placeholder="MM/YY" maxlength="5" required>
                                 </div>
                                 <div class="form-group half">
-                                    <label for="cc-cvc">CVC</label>
+                                    <label for="cc-cvc" data-i18n="label-cc-cvc">CVC</label>
                                     <input type="password" id="cc-cvc" placeholder="123" maxlength="4" required>
                                 </div>
                             </div>
 
                             <button type="submit" class="btn-primary submit-btn" id="callBtn">
-                                <span class="btn-text">Initiate AI Call</span>
+                                <span class="btn-text" data-i18n="btn-call">Initiate AI Call</span>
                                 <div class="btn-loader hidden">
                                     <span class="dot"></span>
                                     <span class="dot"></span>
@@ -143,7 +154,7 @@
                             <div class="terminal-dots">
                                 <span></span><span></span><span></span>
                             </div>
-                            <div class="terminal-title">Agent Status</div>
+                            <div class="terminal-title" data-i18n="agent-status-title">Agent Status</div>
                         </div>
 
                         <div class="agent-avatar-container">
@@ -153,19 +164,22 @@
                                     <i class="fa-solid fa-robot"></i>
                                 </div>
                             </div>
-                            <div class="agent-status-text" id="agentStatusText">Awaiting Instructions</div>
+                            <div class="agent-status-text" id="agentStatusText" data-i18n="agent-status-default">
+                                Awaiting Instructions</div>
                         </div>
 
                         <div class="call-log" id="callLog">
-                            <div class="log-entry system">Agent initialized. Ready to call.</div>
+                            <div class="log-entry system" data-i18n="call-log-default">Agent initialized. Ready to call.
+                            </div>
                         </div>
 
                         <div class="result-card hidden" id="resultCard">
                             <div class="result-icon success"><i class="fa-regular fa-circle-check"></i></div>
-                            <h3 id="resultTitle">Reservation Confirmed!</h3>
+                            <h3 id="resultTitle" data-i18n="result-title-success">Reservation Confirmed!</h3>
                             <p id="resultDesc">Your table for 2 on Oct 24th at 19:00 is successfully booked. A deposit
                                 of $50 was held.</p>
-                            <button class="btn-secondary" id="resetBtn">Make Another Booking</button>
+                            <button class="btn-secondary" id="resetBtn" data-i18n="btn-reset">Make Another
+                                Booking</button>
                         </div>
                     </div>
                 </div>
@@ -180,12 +194,12 @@
                 <a href="#" class="logo">
                     <i class="fa-solid fa-phone-volume"></i> Moshi<span class="highlight">Moshi</span>
                 </a>
-                <p>Bridging the language gap for authentic dining experiences.</p>
+                <p data-i18n="footer-desc">Bridging the language gap for authentic dining experiences.</p>
             </div>
             <div class="footer-links">
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
-                <a href="#">Contact Support</a>
+                <a href="#" data-i18n="footer-privacy">Privacy Policy</a>
+                <a href="#" data-i18n="footer-terms">Terms of Service</a>
+                <a href="#" data-i18n="footer-contact">Contact Support</a>
             </div>
         </div>
     </footer>
@@ -194,25 +208,27 @@
     <div class="modal-overlay hidden" id="loginModal">
         <div class="modal glass-panel">
             <button class="close-btn" id="closeModal"><i class="fa-solid fa-xmark"></i></button>
-            <h2>User Login</h2>
-            <p>Sign in to access your reservation history and saved payment methods.</p>
+            <h2 data-i18n="modal-title">User Login</h2>
+            <p data-i18n="modal-desc">Sign in to access your reservation history and saved payment methods.</p>
             <form id="loginForm">
                 <div class="form-group">
-                    <label for="email">Email</label>
+                    <label for="email" data-i18n="label-email">Email</label>
                     <input type="email" id="email" placeholder="you@example.com" required>
                 </div>
                 <div class="form-group">
-                    <label for="password">Password</label>
+                    <label for="password" data-i18n="label-password">Password</label>
                     <input type="password" id="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="btn-primary full-width">Sign In</button>
+                <button type="submit" class="btn-primary full-width" data-i18n="btn-signin">Sign In</button>
             </form>
             <div class="modal-footer">
-                <p>Don't have an account? <a href="#" class="highlight">Sign up</a></p>
+                <p><span data-i18n="modal-no-account">Don't have an account?</span> <a href="#" class="highlight"
+                        data-i18n="modal-signup">Sign up</a></p>
             </div>
         </div>
     </div>
 
+    <script src="i18n.js"></script>
     <script src="app.js"></script>
 </body>
 

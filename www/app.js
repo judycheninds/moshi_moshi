@@ -53,11 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const btn = loginForm.querySelector('button');
         const originalText = btn.innerHTML;
-        btn.innerHTML = 'Signing in...';
+        btn.innerHTML = translateStr("signing-in");
 
         setTimeout(() => {
             loginModal.classList.add('hidden');
-            loginBtn.innerHTML = '<span>My Account</span> <i class="fa-solid fa-user"></i>';
+            loginBtn.innerHTML = `<span>${translateStr("my-account")}</span> <i class="fa-solid fa-user"></i>`;
             btn.innerHTML = originalText;
             loginForm.reset();
         }, 1500);
@@ -91,12 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     resetBtn.addEventListener('click', () => {
         resultCard.classList.add('hidden');
-        agentStatusText.textContent = 'Awaiting Instructions';
+        agentStatusText.textContent = translateStr('agent-status-default');
         agentContainer.classList.remove('calling');
-        callLogContainer.innerHTML = '<div class="log-entry system">Agent ready for next call.</div>';
+        callLogContainer.innerHTML = `<div class="log-entry system">${translateStr('call-log-default')}</div>`;
 
         // Reset form
-        btnText.textContent = 'Initiate AI Call';
+        btnText.textContent = translateStr('btn-call');
         callBtn.disabled = false;
         callBtn.style.opacity = '1';
         btnLoader.classList.add('hidden');
@@ -132,10 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const people = document.getElementById('people').value;
 
         agentContainer.classList.add('calling');
-        agentStatusText.textContent = `Dialing ${phone}...`;
+        agentStatusText.textContent = `${translateStr('dialing')} ${phone}...`;
 
         callLogContainer.innerHTML = '';
-        addLog('Initializing MoshiMoshi AI Agent...', 'system');
+        addLog(translateStr('init-agent'), 'system');
 
         // Connect to our real Twilio + Gemini Node.js server!
         fetch('https://moshi-moshi-8dh6.onrender.com/api/real-call', {
@@ -145,42 +145,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    addLog('Real Phone Call Initiated!', 'system');
-                    addLog('Twilio Call SID: ' + data.callSid, 'system');
-                    agentStatusText.textContent = 'Call Live on Twilio!';
+                    addLog(translateStr('real-call-initiated'), 'system');
+                    addLog(translateStr('twilio-call-sid') + ' ' + data.callSid, 'system');
+                    agentStatusText.textContent = translateStr('call-live');
 
                     // Keep the UI in a "Calling" state for 25 seconds while you talk to it!
-                    addLog('Please pick up the phone and speak Japanese to the Agent!', 'agent');
+                    addLog(translateStr('pick-up'), 'agent');
 
                     setTimeout(() => {
                         finishCall(true, date, time, people, userPhone);
                     }, 25000); // 25s timeout for demo
 
                 } else {
-                    addLog('Error: ' + data.error, 'error');
+                    addLog(`${translateStr('error-prefix')} ${data.error}`, 'error');
                     finishCall(false, date, time, people, userPhone);
                 }
             }).catch(err => {
-                addLog('Failed to connect to backend.', 'error');
+                addLog(translateStr('failed-backend'), 'error');
                 finishCall(false, date, time, people, userPhone);
             });
     }
 
     function finishCall(success, date, time, people, userPhone) {
         agentContainer.classList.remove('calling');
-        agentStatusText.textContent = 'Agent Standby';
+        agentStatusText.textContent = translateStr('agent-standby');
 
         // Simulate success vs failure
         if (success) {
             resultIcon.className = 'result-icon success';
             resultIcon.innerHTML = '<i class="fa-regular fa-circle-check"></i>';
-            resultTitle.textContent = 'Reservation Confirmed!';
+            resultTitle.textContent = translateStr('result-title-success');
 
             // Format nice date output
             const dateObj = new Date(date);
             const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-            resultDesc.textContent = `Your table for ${people} on ${dateStr} at ${time} is successfully booked! A deposit authorization was securely held.`;
+            resultDesc.textContent = translateStr('success-msg')
+                .replace('{people}', people)
+                .replace('{dateStr}', dateStr)
+                .replace('{time}', time);
+
             resultCard.classList.remove('hidden');
 
             // Trigger the SMS Confirmation 
@@ -195,8 +199,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Unused failure path for now, but ready
             resultIcon.className = 'result-icon error';
             resultIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
-            resultTitle.textContent = 'Reservation Failed';
-            resultDesc.textContent = `The restaurant is fully booked for ${time}. Try selecting a different time or date.`;
+            resultTitle.textContent = translateStr('reservation-failed');
+            resultDesc.textContent = translateStr('failed-msg').replace('{time}', time);
             resultCard.classList.remove('hidden');
         }
     }
