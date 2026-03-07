@@ -10,6 +10,11 @@ app.use(express.json());
 // Must parse urlencoded forms for Twilio webhooks
 app.use(express.urlencoded({ extended: true }));
 
+// Simple health check route so visiting the URL doesn't show "Cannot GET /"
+app.get('/', (req, res) => {
+    res.send('✅ Moshi Moshi Backend is Live and Running!');
+});
+
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
