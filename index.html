@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moshi Moshi - AI Japanese Restaurant Calling Agent</title>
+    <meta name="description" content="AI agent that calls Japanese restaurants and speaks Japanese on your behalf to secure reservations.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="background-container">
+        <div class="bg-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="container nav-content">
+            <a href="#" class="logo">
+                <i class="fa-solid fa-phone-volume"></i> Moshi<span class="highlight">Moshi</span> <span class="jp-logo">もしもし</span>
+            </a>
+            <div class="nav-links">
+                <a href="#how-it-works">How it Works</a>
+                <a href="#reservation">Make Reservation</a>
+                <button class="btn-primary login-btn" id="loginBtn"><span>Login / Sign Up</span> <i class="fa-solid fa-arrow-right-to-bracket"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container hero-content">
+                <div class="hero-text glass-panel">
+                    <h1>Your Personal Bilingual Concierge</h1>
+                    <p class="subtitle">Our AI calls Japanese restaurants, speaks fluent Japanese, and secures your table. Never worry about language barriers again.</p>
+                    <a href="#reservation" class="btn-primary cta-btn">Start Calling Now</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reservation Tool Section -->
+        <section id="reservation" class="reservation-section">
+            <div class="container">
+                <div class="reservation-wrapper">
+                    <!-- Left: Form -->
+                    <div class="form-panel glass-panel">
+                        <h2><i class="fa-solid fa-utensils"></i> Reservation Details</h2>
+                        <p class="form-desc">Provide the restaurant's details and we'll handle the call.</p>
+
+                        <form id="reservationForm">
+                            <div class="form-group">
+                                <label for="userPhone"><i class="fa-solid fa-mobile-screen"></i> Your Phone Number (For SMS Confirmation)</label>
+                                <input type="tel" id="userPhone" placeholder="+1 555-XXXX-XXXX" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="phone"><i class="fa-solid fa-phone"></i> Restaurant Phone Number</label>
+                                <input type="tel" id="phone" placeholder="+81 3-XXXX-XXXX" required>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="form-group half">
+                                    <label for="date"><i class="fa-regular fa-calendar"></i> Date</label>
+                                    <input type="date" id="date" required>
+                                </div>
+                                <div class="form-group half">
+                                    <label for="time"><i class="fa-regular fa-clock"></i> Time</label>
+                                    <input type="time" id="time" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="people"><i class="fa-solid fa-users"></i> Number of People</label>
+                                <div class="counter-input">
+                                    <button type="button" id="minusBtn" class="counter-btn"><i class="fa-solid fa-minus"></i></button>
+                                    <input type="number" id="people" value="2" min="1" max="20" required readonly>
+                                    <button type="button" id="plusBtn" class="counter-btn"><i class="fa-solid fa-plus"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="form-separator"></div>
+                            
+                            <h3><i class="fa-regular fa-credit-card"></i> Deposit Method</h3>
+                            <p class="small-text text-muted">A credit card is required. Some premium Japanese restaurants mandate a deposit. You will only be charged if the restaurant requests it.</p>
+                            
+                            <div class="form-group">
+                                <label for="cc-name">Cardholder Name</label>
+                                <input type="text" id="cc-name" placeholder="John Doe" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="cc-number">Card Number</label>
+                                <input type="text" id="cc-number" placeholder="0000 0000 0000 0000" maxlength="19" required>
+                            </div>
+                            <div class="row">
+                                <div class="form-group half">
+                                    <label for="cc-exp">Expiry (MM/YY)</label>
+                                    <input type="text" id="cc-exp" placeholder="MM/YY" maxlength="5" required>
+                                </div>
+                                <div class="form-group half">
+                                    <label for="cc-cvc">CVC</label>
+                                    <input type="password" id="cc-cvc" placeholder="123" maxlength="4" required>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary submit-btn" id="callBtn">
+                                <span class="btn-text">Initiate AI Call</span>
+                                <div class="btn-loader hidden">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Call Status Simulator -->
+                    <div class="status-panel glass-panel">
+                        <div class="terminal-header">
+                            <div class="terminal-dots">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <div class="terminal-title">Agent Status</div>
+                        </div>
+                        
+                        <div class="agent-avatar-container">
+                            <div class="ring-container">
+                                <div class="ringring"></div>
+                                <div class="circle">
+                                    <i class="fa-solid fa-robot"></i>
+                                </div>
+                            </div>
+                            <div class="agent-status-text" id="agentStatusText">Awaiting Instructions</div>
+                        </div>
+
+                        <div class="call-log" id="callLog">
+                            <div class="log-entry system">Agent initialized. Ready to call.</div>
+                        </div>
+                        
+                        <div class="result-card hidden" id="resultCard">
+                            <div class="result-icon success"><i class="fa-regular fa-circle-check"></i></div>
+                            <h3 id="resultTitle">Reservation Confirmed!</h3>
+                            <p id="resultDesc">Your table for 2 on Oct 24th at 19:00 is successfully booked. A deposit of $50 was held.</p>
+                            <button class="btn-secondary" id="resetBtn">Make Another Booking</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container footer-content">
+            <div class="footer-brand">
+                <a href="#" class="logo">
+                    <i class="fa-solid fa-phone-volume"></i> Moshi<span class="highlight">Moshi</span>
+                </a>
+                <p>Bridging the language gap for authentic dining experiences.</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Contact Support</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay hidden" id="loginModal">
+        <div class="modal glass-panel">
+            <button class="close-btn" id="closeModal"><i class="fa-solid fa-xmark"></i></button>
+            <h2>User Login</h2>
+            <p>Sign in to access your reservation history and saved payment methods.</p>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-primary full-width">Sign In</button>
+            </form>
+            <div class="modal-footer">
+                <p>Don't have an account? <a href="#" class="highlight">Sign up</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
