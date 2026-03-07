@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Moshi Moshi</string>
+    <string name="title_activity_main">Moshi Moshi</string>
+    <string name="package_name">com.moshi.agent</string>
+    <string name="custom_url_scheme">com.moshi.agent</string>
+</resources>
