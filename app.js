@@ -352,6 +352,12 @@ document.addEventListener('DOMContentLoaded', () => {
         agentContainer.classList.remove('calling');
         agentStatusText.textContent = translateStr('agent-standby');
 
+        const resultTranscript = document.getElementById('resultTranscript');
+        if (resultTranscript) {
+            resultTranscript.innerHTML = callLogContainer.innerHTML;
+            resultTranscript.scrollTop = resultTranscript.scrollHeight;
+        }
+
         // Simulate success vs failure
         if (success) {
             resultIcon.className = 'result-icon success';
