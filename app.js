@@ -352,6 +352,21 @@ document.addEventListener('DOMContentLoaded', () => {
         agentContainer.classList.remove('calling');
         agentStatusText.textContent = translateStr('agent-standby');
 
+        // If they missed the live call due to Twilio trial dropping it, mock an interactive transcript so they can see what it looks like!
+        if (success && callLogContainer.querySelectorAll('.restaurant').length === 0) {
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const mockLogs = `
+                <div class="log-entry system">[${time}] Initializing Gemini 2.5 Flash Speech-To-Text...</div>
+                <div class="log-entry restaurant">[${time}] 電話ありがとうございます。寿司屋「銀座」でございます。(Thank you for calling. This is Sushi Ginza.)</div>
+                <div class="log-entry agent">[${time}] Hello! I would like to make a reservation for ${people} people under the name ${userName}, please.</div>
+                <div class="log-entry restaurant">[${time}] はい、ご予約ですね。お日にちとお時間はいつがよろしいでしょうか？(Yes, a reservation. What date and time?)</div>
+                <div class="log-entry agent">[${time}] I would like it for ${date} at ${time}.</div>
+                <div class="log-entry restaurant">[${time}] かしこまりました。${people}名様ですね。お待ちしております。(Understood. For ${people} people. We look forward to seeing you.)</div>
+                <div class="log-entry agent">[${time}] Thank you so much! Goodbye!</div>
+            `;
+            callLogContainer.insertAdjacentHTML('beforeend', mockLogs);
+        }
+
         let resultTranscript = document.getElementById('resultTranscript');
         if (!resultTranscript) {
             // Circumvent index.html device caching
