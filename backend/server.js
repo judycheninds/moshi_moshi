@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const twilio = require('twilio');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -10,10 +11,8 @@ app.use(express.json());
 // Must parse urlencoded forms for Twilio webhooks
 app.use(express.urlencoded({ extended: true }));
 
-// Simple health check route so visiting the URL doesn't show "Cannot GET /"
-app.get('/', (req, res) => {
-    res.send('✅ Moshi Moshi Backend is Live and Running!');
-});
+// Serve the frontend web files directly from this server to bypass Vercel
+app.use(express.static(path.join(__dirname, '../')));
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
