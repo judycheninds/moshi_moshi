@@ -205,19 +205,19 @@ app.post('/twilio/voice', (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW'; // Specific STT for Taiwan
-        twilioVoice = 'Google.cmn-TW-Wavenet-A';
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Google.cmn-CN-Wavenet-A';
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Google.ja-JP-Neural2-B';
+        twilioVoice = 'Polly.Kazuha-Neural';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Google.en-US-Journey-F';
+        twilioVoice = 'Polly.Salli-Neural';
     }
 
     // The initial thing the AI says to start the conversation
@@ -232,7 +232,7 @@ app.post('/twilio/voice', (req, res) => {
     }
 
     // Add a slight pause at the very beginning of the phone connection to ensure the human is ready and listening organically
-    twiml.pause({ length: 2 });
+    twiml.pause({ length: 1 });
 
     // Use Twilio's reliable voice mapped to local language
     twiml.say({ voice: twilioVoice, language: sayLang }, greeting);
@@ -242,7 +242,7 @@ app.post('/twilio/voice', (req, res) => {
         input: 'speech',
         language: gatherLang,
         action: publicUrl + '/twilio/gather-result',
-        speechTimeout: '1.2', // Reduce silence threshold to reply significantly faster
+        speechTimeout: 'auto', // Restore to auto to prevent Twilio default 5s fallback penalty
         timeout: 10
     });
 
@@ -265,19 +265,19 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW';
-        twilioVoice = 'Google.cmn-TW-Wavenet-A';
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Google.cmn-CN-Wavenet-A';
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Google.ja-JP-Neural2-B';
+        twilioVoice = 'Polly.Kazuha-Neural';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Google.en-US-Journey-F';
+        twilioVoice = 'Polly.Salli-Neural';
     }
 
     if (transcribedText && callState) {
@@ -323,7 +323,7 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: publicUrl + '/twilio/gather-result',
-                speechTimeout: '1.2',
+                speechTimeout: 'auto',
                 timeout: 10
             });
         } catch (e) {
@@ -339,7 +339,7 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: publicUrl + '/twilio/gather-result',
-                speechTimeout: '1.2',
+                speechTimeout: 'auto',
                 timeout: 10
             });
         }
