@@ -139,9 +139,13 @@ app.post('/api/real-call', async (req, res) => {
         const isTaiwan = langInfo.includes('tw') || langInfo.includes('hant') || langInfo === 'zh';
         const defaultCode = isTaiwan ? '886' : '81'; // Default TW or JP
 
+        // If it looks like a US number
+        if (digits.startsWith('1') && digits.length === 11) return '+' + digits;
+        if (digits.length === 10 && !digits.startsWith('0')) return '+1' + digits;
+
         // If they already typed 886... without the +
         if (digits.startsWith('886') && digits.length > 10) return '+' + digits;
-        if (digits.startsWith('81') && digits.length > 10) return '+' + digits;
+        if (digits.startsWith('81') && digits.length > 9) return '+' + digits;
 
         if (digits.startsWith('0')) {
             return `+${defaultCode}${digits.substring(1)}`;
@@ -355,8 +359,12 @@ app.post('/api/send-sms', async (req, res) => {
         const isTaiwan = langInfo.includes('tw') || langInfo.includes('hant') || langInfo === 'zh';
         const defaultCode = isTaiwan ? '886' : '81';
 
+        // If it looks like a US number
+        if (digits.startsWith('1') && digits.length === 11) return '+' + digits;
+        if (digits.length === 10 && !digits.startsWith('0')) return '+1' + digits;
+
         if (digits.startsWith('886') && digits.length > 10) return '+' + digits;
-        if (digits.startsWith('81') && digits.length > 10) return '+' + digits;
+        if (digits.startsWith('81') && digits.length > 9) return '+' + digits;
 
         if (digits.startsWith('0')) return `+${defaultCode}${digits.substring(1)}`;
         return `+${defaultCode}${digits}`;
