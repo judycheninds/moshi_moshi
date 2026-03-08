@@ -65,7 +65,7 @@ Output MUST be a JSON array of objects, with each object following this EXACT fo
 Make the dialog realistic (about 6-8 turns total), confirm the date/time/pax, and agree to a credit card deposit hold. End the dialog with the restaurant saying "Thank you, we'll see you then."
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(prompt);
         let textResult = result.response.text().trim();
 
@@ -194,7 +194,7 @@ app.post('/twilio/gather-result', async (req, res) => {
         `;
 
         try {
-            const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const aiResponse = await model.generateContent(prompt);
             const responseText = aiResponse.response.text().trim();
 
@@ -216,6 +216,16 @@ app.post('/twilio/gather-result', async (req, res) => {
             if (targetLang.startsWith('ja')) errMsg = "すみません、もう一度お願いします。";
             if (targetLang.startsWith('zh')) errMsg = "不好意思，可以請您再說一次嗎？";
             twiml.say({ language: targetLang }, errMsg);
+
+            // CRITICAL: We must re-initiate the gather block even if Gemini fails! 
+            // If we don't, Twilio hits the end of the instructions and drops the call.
+            twiml.gather({
+                input: 'speech',
+                language: targetLang,
+                action: publicUrl + '/twilio/gather-result',
+                speechTimeout: 'auto',
+                timeout: 10
+            });
         }
     } else {
         // If the gather timed out or got nothing, just end the call gracefully
