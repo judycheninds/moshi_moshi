@@ -174,15 +174,23 @@ app.post('/twilio/gather-result', async (req, res) => {
         // Build the prompt for Gemini to decide what the AI should say next
         const prompt = `
             You are a super helpful AI assistant acting on a telephone on behalf of your user. You are speaking to a restaurant staff member.
-            Your Goal: ${callState.goal}
             
-            Conversation History:
+            [OBJECTIVE]
+            ${callState.goal}
+            
+            [CONVERSATION HISTORY]
             ${callState.history.map(m => '[' + m.role + ']: ' + m.content).join('\n')}
             
+            [CURRENT SITUATION]
             The restaurant just said: "${transcribedText}"
             
-            Respond with ONLY the exact, raw text you want to say back on the phone to continue the booking. Speak exclusively in the language corresponding to the BCP-47 code: '${targetLang}'.
-            DO NOT output translations. DO NOT use quotes, emojis, or punctuation not native to the language. ONLY OUTPUT RAW TEXT so the Text-To-Speech engine reads it cleanly!
+            [INSTRUCTIONS]
+            1. Directly answer their question or statement using the information in your [OBJECTIVE] (which contains the required date, time, and number of people). Be explicit and helpful.
+            2. Be conversational and natural, like a real person calling. Do not use robotic phrasing. 
+            3. If they ask for a name, say the reservation is for "User".
+            4. Respond with ONLY the exact, raw text you want to say back on the phone to continue the booking.
+            5. CRITICAL: Speak exclusively in the language corresponding to the BCP-47 code: '${targetLang}'.
+            6. DO NOT output translations. DO NOT use quotes, emojis, markdown, or punctuation not native to the language. ONLY OUTPUT RAW TEXT so the Text-To-Speech engine reads it cleanly!
         `;
 
         try {
