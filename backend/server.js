@@ -65,7 +65,7 @@ Output MUST be a JSON array of objects, with each object following this EXACT fo
 Make the dialog realistic (about 6-8 turns total), confirm the date/time/pax, and agree to a credit card deposit hold. End the dialog with the restaurant saying "Thank you, we'll see you then."
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
         const result = await model.generateContent(prompt);
         let textResult = result.response.text().trim();
 
@@ -197,7 +197,7 @@ app.post('/twilio/gather-result', async (req, res) => {
         `;
 
         try {
-            const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
             const aiResponse = await model.generateContent(prompt);
             const responseText = aiResponse.response.text().trim();
 
