@@ -128,13 +128,21 @@ app.post('/api/real-call', async (req, res) => {
     // Helper to silently fix non-E164 local phone numbers (like 0912... -> +886912...)
     const formatPhone = (ph, langStr) => {
         if (!ph) return ph;
-        let str = String(ph).trim();
-        if (str.startsWith('+')) return str; // Already valid E164
+        let digits = String(ph).replace(/\D/g, ''); // Strip EVERYTHING non-numeric
+        if (!digits) return ph;
 
-        const isTaiwan = langStr.toLowerCase().includes('tw') || langStr.toLowerCase().includes('hant') || langStr === 'zh';
+        if (String(ph).trim().startsWith('+')) {
+            return '+' + digits; // Perfectly clean +E164
+        }
+
+        const langInfo = langStr ? langStr.toLowerCase() : '';
+        const isTaiwan = langInfo.includes('tw') || langInfo.includes('hant') || langInfo === 'zh';
         const defaultCode = isTaiwan ? '886' : '81'; // Default TW or JP
 
-        let digits = str.replace(/\D/g, '');
+        // If they already typed 886... without the +
+        if (digits.startsWith('886') && digits.length > 10) return '+' + digits;
+        if (digits.startsWith('81') && digits.length > 10) return '+' + digits;
+
         if (digits.startsWith('0')) {
             return `+${defaultCode}${digits.substring(1)}`;
         }
@@ -336,11 +344,20 @@ app.post('/api/send-sms', async (req, res) => {
 
     const formatPhone = (ph, langStr) => {
         if (!ph) return ph;
-        let str = String(ph).trim();
-        if (str.startsWith('+')) return str;
-        const isTaiwan = langStr && (langStr.toLowerCase().includes('tw') || langStr.toLowerCase().includes('hant') || langStr === 'zh');
+        let digits = String(ph).replace(/\D/g, '');
+        if (!digits) return ph;
+
+        if (String(ph).trim().startsWith('+')) {
+            return '+' + digits;
+        }
+
+        const langInfo = langStr ? langStr.toLowerCase() : '';
+        const isTaiwan = langInfo.includes('tw') || langInfo.includes('hant') || langInfo === 'zh';
         const defaultCode = isTaiwan ? '886' : '81';
-        let digits = str.replace(/\D/g, '');
+
+        if (digits.startsWith('886') && digits.length > 10) return '+' + digits;
+        if (digits.startsWith('81') && digits.length > 10) return '+' + digits;
+
         if (digits.startsWith('0')) return `+${defaultCode}${digits.substring(1)}`;
         return `+${defaultCode}${digits}`;
     };
