@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- PWA Download Logic ----
     let deferredPrompt;
-    const downloadAppBtn = document.getElementById('downloadAppBtn');
+    const downloadAppBtns = document.querySelectorAll('.download-btn');
 
     window.addEventListener('beforeinstallprompt', (e) => {
         // Prevent Chrome 67 and earlier from automatically showing the prompt
@@ -20,22 +20,24 @@ document.addEventListener('DOMContentLoaded', () => {
         deferredPrompt = e;
     });
 
-    downloadAppBtn.addEventListener('click', async () => {
-        // Check if device is iOS to show custom instructions
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    downloadAppBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            // Check if device is iOS to show custom instructions
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-        if (isIOS) {
-            alert("To install the Moshi Moshi app on iOS:\n1. Tap the 'Share' icon at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
-        } else if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                console.log('User accepted the A2HS prompt');
+            if (isIOS) {
+                alert("To install the Moshi Moshi app on iOS:\n1. Tap the 'Share' icon at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
+            } else if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('User accepted the A2HS prompt');
+                }
+                deferredPrompt = null;
+            } else {
+                alert("To install this app, simply use your browser's 'Add to Home Screen' or 'Install App' feature from the menu!");
             }
-            deferredPrompt = null;
-        } else {
-            alert("To install this app, simply use your browser's 'Add to Home Screen' or 'Install App' feature from the menu!");
-        }
+        });
     });
 
     // ---- Counter functionality ----
