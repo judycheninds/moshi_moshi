@@ -98,7 +98,7 @@ Make the dialog realistic (about 6-8 turns total), confirm the date/time/pax, an
 
 // Route called by Frontend to trigger a REAL out-bound call
 app.post('/api/real-call', async (req, res) => {
-    const { phone, date, time, people, language } = req.body;
+    const { phone, date, time, people, language, userName } = req.body;
 
     if (!process.env.PUBLIC_URL || process.env.PUBLIC_URL.includes('your-ngrok')) {
         return res.status(500).json({ error: 'Please set up an ngrok PUBLIC_URL in .env before making real calls.' });
@@ -113,8 +113,9 @@ app.post('/api/real-call', async (req, res) => {
 
         // Store the goal state of this call ID
         activeCalls.set(call.sid, {
-            goal: `Book a table for ${people} people on ${date} at ${time}.`,
+            goal: `Book a table for ${people} people under the name "${userName}" on ${date} at ${time}.`,
             language: language || 'en-US',
+            userName: userName || 'User',
             history: [] // We'll feed this context to Gemini
         });
 
@@ -185,9 +186,9 @@ app.post('/twilio/gather-result', async (req, res) => {
             The restaurant just said: "${transcribedText}"
             
             [INSTRUCTIONS]
-            1. Directly answer their question or statement using the information in your [OBJECTIVE] (which contains the required date, time, and number of people). Be explicit and helpful.
+            1. Directly answer their question or statement using the information in your [OBJECTIVE] (which contains the required date, time, name and number of people). Be explicit and helpful.
             2. Be conversational and natural, like a real person calling. Do not use robotic phrasing. 
-            3. If they ask for a name, say the reservation is for "User".
+            3. If they ask for your name (who the reservation is for), state loudly and clearly that the reservation is for "${callState.userName}".
             4. Respond with ONLY the exact, raw text you want to say back on the phone to continue the booking.
             5. CRITICAL: Speak exclusively in the language corresponding to the BCP-47 code: '${targetLang}'.
             6. DO NOT output translations. DO NOT use quotes, emojis, markdown, or punctuation not native to the language. ONLY OUTPUT RAW TEXT so the Text-To-Speech engine reads it cleanly!
@@ -244,7 +245,7 @@ app.post('/twilio/gather-result', async (req, res) => {
 // 3. SMS CONFIRMATION
 // ==========================================
 app.post('/api/send-sms', async (req, res) => {
-    const { userPhone, date, time, people } = req.body;
+    const { userName, userPhone, date, time, people } = req.body;
 
     if (!twilioClient) {
         return res.status(500).json({ error: 'Twilio Client not initialized.' });
@@ -252,7 +253,7 @@ app.post('/api/send-sms', async (req, res) => {
 
     try {
         await twilioClient.messages.create({
-            body: `Moshi Moshi! 🍱 Your table for ${people} on ${date} at ${time} is officially confirmed!`,
+            body: `Moshi Moshi ${userName}! 🍱 Your table for ${people} on ${date} at ${time} is officially confirmed!`,
             from: process.env.TWILIO_PHONE_NUMBER,
             to: userPhone
         });

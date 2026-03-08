@@ -172,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         callBtn.style.opacity = '0.7';
 
         const phone = document.getElementById('phone').value;
+        const userName = document.getElementById('userName').value;
         const userPhone = document.getElementById('userPhone').value;
         const date = document.getElementById('date').value;
         const time = document.getElementById('time').value;
@@ -187,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('https://moshi-moshi-8dh6.onrender.com/api/real-call', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, userPhone, date, time, people, language: navigator.language || 'en-US' })
+            body: JSON.stringify({ phone, userName, userPhone, date, time, people, language: navigator.language || 'en-US' })
         }).then(res => res.json())
             .then(data => {
                 if (data.success) {
@@ -199,20 +200,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     addLog(translateStr('pick-up'), 'agent');
 
                     setTimeout(() => {
-                        finishCall(true, date, time, people, userPhone);
+                        finishCall(true, date, time, people, userPhone, userName);
                     }, 25000); // 25s timeout for demo
 
                 } else {
                     addLog(`${translateStr('error-prefix')} ${data.error}`, 'error');
-                    finishCall(false, date, time, people, userPhone);
+                    finishCall(false, date, time, people, userPhone, userName);
                 }
             }).catch(err => {
                 addLog(translateStr('failed-backend'), 'error');
-                finishCall(false, date, time, people, userPhone);
+                finishCall(false, date, time, people, userPhone, userName);
             });
     }
 
-    function finishCall(success, date, time, people, userPhone) {
+    function finishCall(success, date, time, people, userPhone, userName) {
         agentContainer.classList.remove('calling');
         agentStatusText.textContent = translateStr('agent-standby');
 
@@ -238,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch('https://moshi-moshi-8dh6.onrender.com/api/send-sms', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userPhone, date: dateStr, time, people })
+                    body: JSON.stringify({ userName, userPhone, date: dateStr, time, people })
                 }).then(() => console.log('SMS confirmation sent!'));
             }
         } else {
