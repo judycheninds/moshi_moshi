@@ -123,7 +123,26 @@ app.get('/api/call-stream/:callSid', (req, res) => {
 
 // Route called by Frontend to trigger a REAL out-bound call
 app.post('/api/real-call', async (req, res) => {
-    const { phone, date, time, people, language, userName, userPhone } = req.body;
+    let { phone, date, time, people, language, userName, userPhone } = req.body;
+
+    // Helper to silently fix non-E164 local phone numbers (like 0912... -> +886912...)
+    const formatPhone = (ph, langStr) => {
+        if (!ph) return ph;
+        let str = String(ph).trim();
+        if (str.startsWith('+')) return str; // Already valid E164
+
+        const isTaiwan = langStr.toLowerCase().includes('tw') || langStr.toLowerCase().includes('hant') || langStr === 'zh';
+        const defaultCode = isTaiwan ? '886' : '81'; // Default TW or JP
+
+        let digits = str.replace(/\D/g, '');
+        if (digits.startsWith('0')) {
+            return `+${defaultCode}${digits.substring(1)}`;
+        }
+        return `+${defaultCode}${digits}`;
+    };
+
+    phone = formatPhone(phone, language || 'en-US');
+    userPhone = formatPhone(userPhone, language || 'en-US');
 
     if (!process.env.PUBLIC_URL || process.env.PUBLIC_URL.includes('your-ngrok')) {
         return res.status(500).json({ error: 'Please set up an ngrok PUBLIC_URL in .env before making real calls.' });
@@ -160,17 +179,22 @@ app.post('/twilio/voice', (req, res) => {
     const targetLang = callState ? callState.language : 'en-US';
 
     // Helper to map browser language to explicit Twilio engines
-    let twilioLang = targetLang;
+    let sayLang = targetLang;
+    let gatherLang = targetLang;
     let twilioVoice = 'alice'; // Alice is the most reliable multilingual basic fallback
 
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
-        twilioLang = 'zh-TW';
+        sayLang = 'zh-TW';
+        gatherLang = 'cmn-Hant-TW'; // Specific STT for Taiwan
     } else if (targetLang.startsWith('zh')) {
-        twilioLang = 'zh-CN';
+        sayLang = 'zh-CN';
+        gatherLang = 'cmn-Hans-CN';
     } else if (targetLang.startsWith('ja')) {
-        twilioLang = 'ja-JP';
+        sayLang = 'ja-JP';
+        gatherLang = 'ja-JP';
     } else {
-        twilioLang = 'en-US';
+        sayLang = 'en-US';
+        gatherLang = 'en-US';
     }
 
     // The initial thing the AI says to start the conversation
@@ -185,12 +209,12 @@ app.post('/twilio/voice', (req, res) => {
     }
 
     // Use Twilio's reliable voice mapped to local language
-    twiml.say({ voice: twilioVoice, language: twilioLang }, greeting);
+    twiml.say({ voice: twilioVoice, language: sayLang }, greeting);
 
     // Now actively listen and wait for the restaurant to answer
     const gather = twiml.gather({
         input: 'speech',
-        language: twilioLang,
+        language: gatherLang,
         action: publicUrl + '/twilio/gather-result',
         speechTimeout: 'auto', // Wait until they stop talking
         timeout: 10
@@ -209,16 +233,21 @@ app.post('/twilio/gather-result', async (req, res) => {
     const callState = activeCalls.get(callSid);
     const targetLang = callState ? callState.language : 'en-US';
 
-    let twilioLang = targetLang;
+    let sayLang = targetLang;
+    let gatherLang = targetLang;
     let twilioVoice = 'alice';
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
-        twilioLang = 'zh-TW';
+        sayLang = 'zh-TW';
+        gatherLang = 'cmn-Hant-TW';
     } else if (targetLang.startsWith('zh')) {
-        twilioLang = 'zh-CN';
+        sayLang = 'zh-CN';
+        gatherLang = 'cmn-Hans-CN';
     } else if (targetLang.startsWith('ja')) {
-        twilioLang = 'ja-JP';
+        sayLang = 'ja-JP';
+        gatherLang = 'ja-JP';
     } else {
-        twilioLang = 'en-US';
+        sayLang = 'en-US';
+        gatherLang = 'en-US';
     }
 
     if (transcribedText && callState) {
@@ -259,10 +288,10 @@ app.post('/twilio/gather-result', async (req, res) => {
             broadcastLog(callSid, 'agent', responseText);
 
             // Speak Gemini's answer, then go back to listening
-            twiml.say({ voice: twilioVoice, language: twilioLang }, responseText);
+            twiml.say({ voice: twilioVoice, language: sayLang }, responseText);
             twiml.gather({
                 input: 'speech',
-                language: twilioLang,
+                language: gatherLang,
                 action: publicUrl + '/twilio/gather-result',
                 speechTimeout: 'auto',
                 timeout: 10
@@ -272,13 +301,13 @@ app.post('/twilio/gather-result', async (req, res) => {
             let errMsg = "I'm sorry, please say that again.";
             if (targetLang.startsWith('ja')) errMsg = "すみません、もう一度お願いします。";
             if (targetLang.startsWith('zh')) errMsg = "不好意思，可以請您再說一次嗎？";
-            twiml.say({ voice: twilioVoice, language: twilioLang }, errMsg);
+            twiml.say({ voice: twilioVoice, language: sayLang }, errMsg);
 
             // CRITICAL: We must re-initiate the gather block even if Gemini fails! 
             // If we don't, Twilio hits the end of the instructions and drops the call.
             twiml.gather({
                 input: 'speech',
-                language: twilioLang,
+                language: gatherLang,
                 action: publicUrl + '/twilio/gather-result',
                 speechTimeout: 'auto',
                 timeout: 10
@@ -289,7 +318,7 @@ app.post('/twilio/gather-result', async (req, res) => {
         let hangupMsg = "I will call back later. Goodbye.";
         if (targetLang.startsWith('ja')) hangupMsg = "また後でかけ直します。失礼します。";
         if (targetLang.startsWith('zh')) hangupMsg = "我晚點再打來。再見。";
-        twiml.say({ voice: twilioVoice, language: twilioLang }, hangupMsg);
+        twiml.say({ voice: twilioVoice, language: sayLang }, hangupMsg);
         twiml.hangup();
         broadcastLog(callSid, 'system', 'Call Ended.');
         broadcastLog(callSid, 'status', 'completed');
@@ -303,7 +332,20 @@ app.post('/twilio/gather-result', async (req, res) => {
 // 3. SMS CONFIRMATION
 // ==========================================
 app.post('/api/send-sms', async (req, res) => {
-    const { userName, userPhone, date, time, people } = req.body;
+    let { userName, userPhone, date, time, people, language } = req.body;
+
+    const formatPhone = (ph, langStr) => {
+        if (!ph) return ph;
+        let str = String(ph).trim();
+        if (str.startsWith('+')) return str;
+        const isTaiwan = langStr && (langStr.toLowerCase().includes('tw') || langStr.toLowerCase().includes('hant') || langStr === 'zh');
+        const defaultCode = isTaiwan ? '886' : '81';
+        let digits = str.replace(/\D/g, '');
+        if (digits.startsWith('0')) return `+${defaultCode}${digits.substring(1)}`;
+        return `+${defaultCode}${digits}`;
+    };
+
+    userPhone = formatPhone(userPhone, language || 'en-US');
 
     if (!twilioClient) {
         return res.status(500).json({ error: 'Twilio Client not initialized.' });
