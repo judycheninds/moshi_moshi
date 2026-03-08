@@ -227,6 +227,9 @@ app.post('/twilio/voice', (req, res) => {
         broadcastLog(callSid, 'agent', greeting);
     }
 
+    // Add a slight pause at the very beginning of the phone connection to ensure the human is ready and listening organically
+    twiml.pause({ length: 2 });
+
     // Use Twilio's reliable voice mapped to local language
     twiml.say({ voice: twilioVoice, language: sayLang }, greeting);
 
@@ -305,6 +308,9 @@ app.post('/twilio/gather-result', async (req, res) => {
             console.log(`[AI Agent] ${responseText}`);
             callState.history.push({ role: 'user', content: responseText });
             broadcastLog(callSid, 'agent', responseText);
+
+            // Simulate organic conversational delay so the AI doesn't brutally interrupt the human the exact millisecond they finish talking
+            twiml.pause({ length: 1 });
 
             // Speak Gemini's answer, then go back to listening
             twiml.say({ voice: twilioVoice, language: sayLang }, responseText);
