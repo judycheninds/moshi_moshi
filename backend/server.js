@@ -98,7 +98,7 @@ Make the dialog realistic (about 6-8 turns total), confirm the date/time/pax, an
 
 // Route called by Frontend to trigger a REAL out-bound call
 app.post('/api/real-call', async (req, res) => {
-    const { phone, date, time, people } = req.body;
+    const { phone, date, time, people, language } = req.body;
 
     if (!process.env.PUBLIC_URL || process.env.PUBLIC_URL.includes('your-ngrok')) {
         return res.status(500).json({ error: 'Please set up an ngrok PUBLIC_URL in .env before making real calls.' });
@@ -114,6 +114,7 @@ app.post('/api/real-call', async (req, res) => {
         // Store the goal state of this call ID
         activeCalls.set(call.sid, {
             goal: `Book a table for ${people} people on ${date} at ${time}.`,
+            language: language || 'en-US',
             history: [] // We'll feed this context to Gemini
         });
 
@@ -128,22 +129,26 @@ app.post('/api/real-call', async (req, res) => {
 app.post('/twilio/voice', (req, res) => {
     const twiml = new twilio.twiml.VoiceResponse();
     const callSid = req.body.CallSid;
+    const callState = activeCalls.get(callSid);
+    const targetLang = callState ? callState.language : 'en-US';
 
     // The initial thing the AI says to start the conversation
-    const greeting = "もしもし、予約をお願いしたいのですが。"; // "Hello, I'd like to make a reservation."
+    let greeting = "Hello, I would like to make a reservation.";
+    if (targetLang.startsWith('ja')) greeting = "もしもし、予約をお願いしたいのですが。";
+    if (targetLang.startsWith('zh')) greeting = "你好，我想要預訂位子。";
 
     // Save to history
-    if (activeCalls.has(callSid)) {
-        activeCalls.get(callSid).history.push({ role: 'user', content: greeting }); // AI plays "user" role to the model
+    if (callState) {
+        callState.history.push({ role: 'user', content: greeting }); // AI plays "user" role to the model
     }
 
-    // Use Twilio's neural Japanese voice
-    twiml.say({ language: 'ja-JP' }, greeting);
+    // Use Twilio's neural voice mapped to local language
+    twiml.say({ language: targetLang }, greeting);
 
     // Now actively listen and wait for the restaurant to answer
     const gather = twiml.gather({
         input: 'speech',
-        language: 'ja-JP',
+        language: targetLang,
         action: publicUrl + '/twilio/gather-result',
         speechTimeout: 'auto', // Wait until they stop talking
         timeout: 10
@@ -160,6 +165,7 @@ app.post('/twilio/gather-result', async (req, res) => {
     const transcribedText = req.body.SpeechResult; // What the restaurant just said!
 
     const callState = activeCalls.get(callSid);
+    const targetLang = callState ? callState.language : 'en-US';
 
     if (transcribedText && callState) {
         console.log(`[Restaurant] ${transcribedText}`);
@@ -167,7 +173,7 @@ app.post('/twilio/gather-result', async (req, res) => {
 
         // Build the prompt for Gemini to decide what the AI should say next
         const prompt = `
-            You are a super helpful AI assistant acting on a telephone on behalf of your user. You are speaking to a Japanese restaurant staff member.
+            You are a super helpful AI assistant acting on a telephone on behalf of your user. You are speaking to a restaurant staff member.
             Your Goal: ${callState.goal}
             
             Conversation History:
@@ -175,8 +181,8 @@ app.post('/twilio/gather-result', async (req, res) => {
             
             The restaurant just said: "${transcribedText}"
             
-            Respond with ONLY the exact, raw Japanese text you want to say back on the phone to continue the booking. Speak exclusively in natural, polite Japanese (Keigo).
-            DO NOT output English translations. DO NOT use quotes, emojis, or punctuation not native to Japanese. ONLY OUTPUT RAW JAPANESE TEXT so the Text-To-Speech engine reads it cleanly!
+            Respond with ONLY the exact, raw text you want to say back on the phone to continue the booking. Speak exclusively in the language corresponding to the BCP-47 code: '${targetLang}'.
+            DO NOT output translations. DO NOT use quotes, emojis, or punctuation not native to the language. ONLY OUTPUT RAW TEXT so the Text-To-Speech engine reads it cleanly!
         `;
 
         try {
@@ -188,21 +194,27 @@ app.post('/twilio/gather-result', async (req, res) => {
             callState.history.push({ role: 'user', content: responseText });
 
             // Speak Gemini's answer, then go back to listening
-            twiml.say({ language: 'ja-JP' }, responseText);
+            twiml.say({ language: targetLang }, responseText);
             twiml.gather({
                 input: 'speech',
-                language: 'ja-JP',
+                language: targetLang,
                 action: publicUrl + '/twilio/gather-result',
                 speechTimeout: 'auto',
                 timeout: 10
             });
         } catch (e) {
             console.error("Gemini failed:", e);
-            twiml.say({ language: 'ja-JP' }, "すみません、もう一度お願いします。"); // Sorry, say again
+            let errMsg = "I'm sorry, please say that again.";
+            if (targetLang.startsWith('ja')) errMsg = "すみません、もう一度お願いします。";
+            if (targetLang.startsWith('zh')) errMsg = "不好意思，可以請您再說一次嗎？";
+            twiml.say({ language: targetLang }, errMsg);
         }
     } else {
         // If the gather timed out or got nothing, just end the call gracefully
-        twiml.say({ language: 'ja-JP' }, "また後でかけ直します。失礼します。"); // Will call back later
+        let hangupMsg = "I will call back later. Goodbye.";
+        if (targetLang.startsWith('ja')) hangupMsg = "また後でかけ直します。失礼します。";
+        if (targetLang.startsWith('zh')) hangupMsg = "我晚點再打來。再見。";
+        twiml.say({ language: targetLang }, hangupMsg);
         twiml.hangup();
     }
 

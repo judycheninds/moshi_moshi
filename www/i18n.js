@@ -110,6 +110,11 @@ const translations = {
 };
 
 let currentLang = "en";
+if (typeof navigator !== "undefined" && navigator.language) {
+    if (navigator.language.toLowerCase().startsWith("zh")) {
+        currentLang = "zh-TW";
+    }
+}
 
 function updateUI() {
     // Basic text content elements
