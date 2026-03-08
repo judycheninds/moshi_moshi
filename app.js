@@ -34,6 +34,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = document.getElementById('closeModal');
     const loginForm = document.getElementById('loginForm');
 
+    // Elements for toggling between Sign In and Sign Up
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDesc = document.getElementById('modalDesc');
+    const modalSubmitBtn = document.getElementById('modalSubmitBtn');
+    const modalToggleText = document.getElementById('modalToggleText');
+    const modalToggleBtn = document.getElementById('modalToggleBtn');
+
+    let isSignUpMode = false;
+
+    // Toggle Mode
+    modalToggleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        isSignUpMode = !isSignUpMode;
+
+        if (isSignUpMode) {
+            modalTitle.setAttribute('data-i18n', 'modal-title-signup');
+            modalTitle.textContent = translateStr('modal-title-signup');
+
+            modalDesc.setAttribute('data-i18n', 'modal-desc-signup');
+            modalDesc.textContent = translateStr('modal-desc-signup');
+
+            modalSubmitBtn.setAttribute('data-i18n', 'modal-signup');
+            modalSubmitBtn.textContent = translateStr('modal-signup');
+
+            modalToggleText.setAttribute('data-i18n', 'modal-has-account');
+            modalToggleText.textContent = translateStr('modal-has-account');
+
+            modalToggleBtn.setAttribute('data-i18n', 'btn-signin');
+            modalToggleBtn.textContent = translateStr('btn-signin');
+        } else {
+            modalTitle.setAttribute('data-i18n', 'modal-title');
+            modalTitle.textContent = translateStr('modal-title');
+
+            modalDesc.setAttribute('data-i18n', 'modal-desc');
+            modalDesc.textContent = translateStr('modal-desc');
+
+            modalSubmitBtn.setAttribute('data-i18n', 'btn-signin');
+            modalSubmitBtn.textContent = translateStr('btn-signin');
+
+            modalToggleText.setAttribute('data-i18n', 'modal-no-account');
+            modalToggleText.textContent = translateStr('modal-no-account');
+
+            modalToggleBtn.setAttribute('data-i18n', 'modal-signup');
+            modalToggleBtn.textContent = translateStr('modal-signup');
+        }
+    });
+
     loginBtn.addEventListener('click', (e) => {
         e.preventDefault();
         loginModal.classList.remove('hidden');
@@ -51,14 +98,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const btn = loginForm.querySelector('button');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = translateStr("signing-in");
+        const originalText = modalSubmitBtn.innerHTML;
+        modalSubmitBtn.innerHTML = isSignUpMode ? translateStr("signing-up") : translateStr("signing-in");
 
         setTimeout(() => {
             loginModal.classList.add('hidden');
             loginBtn.innerHTML = `<span>${translateStr("my-account")}</span> <i class="fa-solid fa-user"></i>`;
-            btn.innerHTML = originalText;
+            modalSubmitBtn.innerHTML = originalText;
             loginForm.reset();
         }, 1500);
     });

@@ -208,8 +208,9 @@
     <div class="modal-overlay hidden" id="loginModal">
         <div class="modal glass-panel">
             <button class="close-btn" id="closeModal"><i class="fa-solid fa-xmark"></i></button>
-            <h2 data-i18n="modal-title">User Login</h2>
-            <p data-i18n="modal-desc">Sign in to access your reservation history and saved payment methods.</p>
+            <h2 id="modalTitle" data-i18n="modal-title">User Login</h2>
+            <p id="modalDesc" data-i18n="modal-desc">Sign in to access your reservation history and saved payment
+                methods.</p>
             <form id="loginForm">
                 <div class="form-group">
                     <label for="email" data-i18n="label-email">Email</label>
@@ -219,11 +220,12 @@
                     <label for="password" data-i18n="label-password">Password</label>
                     <input type="password" id="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="btn-primary full-width" data-i18n="btn-signin">Sign In</button>
+                <button type="submit" id="modalSubmitBtn" class="btn-primary full-width" data-i18n="btn-signin">Sign
+                    In</button>
             </form>
             <div class="modal-footer">
-                <p><span data-i18n="modal-no-account">Don't have an account?</span> <a href="#" class="highlight"
-                        data-i18n="modal-signup">Sign up</a></p>
+                <p><span id="modalToggleText" data-i18n="modal-no-account">Don't have an account?</span> <a href="#"
+                        id="modalToggleBtn" class="highlight" data-i18n="modal-signup">Sign up</a></p>
             </div>
         </div>
     </div>

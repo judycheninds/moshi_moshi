@@ -37,6 +37,10 @@ const translations = {
         "btn-signin": "Sign In",
         "modal-no-account": "Don't have an account?",
         "modal-signup": "Sign up",
+        "modal-title-signup": "Create Account",
+        "modal-desc-signup": "Sign up to track your reservations and save time.",
+        "modal-has-account": "Already have an account?",
+        "signing-up": "Creating account...",
 
         "dialing": "Dialing",
         "real-call-initiated": "Real Phone Call Initiated!",
@@ -91,6 +95,10 @@ const translations = {
         "btn-signin": "登入",
         "modal-no-account": "還沒有帳號？",
         "modal-signup": "註冊",
+        "modal-title-signup": "建立新帳戶",
+        "modal-desc-signup": "快速註冊以追蹤您的預約紀錄。",
+        "modal-has-account": "已經有帳號了嗎？",
+        "signing-up": "帳戶建立中...",
 
         "dialing": "正在撥號",
         "real-call-initiated": "已發起真實電話！",
