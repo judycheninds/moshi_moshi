@@ -159,6 +159,20 @@ app.post('/twilio/voice', (req, res) => {
     const callState = activeCalls.get(callSid);
     const targetLang = callState ? callState.language : 'en-US';
 
+    // Helper to map browser language to explicit Twilio engines
+    let twilioLang = targetLang;
+    let twilioVoice = 'alice'; // Alice is the most reliable multilingual basic fallback
+
+    if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
+        twilioLang = 'zh-TW';
+    } else if (targetLang.startsWith('zh')) {
+        twilioLang = 'zh-CN';
+    } else if (targetLang.startsWith('ja')) {
+        twilioLang = 'ja-JP';
+    } else {
+        twilioLang = 'en-US';
+    }
+
     // The initial thing the AI says to start the conversation
     let greeting = "Hello, I would like to make a reservation.";
     if (targetLang.startsWith('ja')) greeting = "もしもし、予約をお願いしたいのですが。";
@@ -170,13 +184,13 @@ app.post('/twilio/voice', (req, res) => {
         broadcastLog(callSid, 'agent', greeting);
     }
 
-    // Use Twilio's neural voice mapped to local language
-    twiml.say({ language: targetLang }, greeting);
+    // Use Twilio's reliable voice mapped to local language
+    twiml.say({ voice: twilioVoice, language: twilioLang }, greeting);
 
     // Now actively listen and wait for the restaurant to answer
     const gather = twiml.gather({
         input: 'speech',
-        language: targetLang,
+        language: twilioLang,
         action: publicUrl + '/twilio/gather-result',
         speechTimeout: 'auto', // Wait until they stop talking
         timeout: 10
@@ -194,6 +208,18 @@ app.post('/twilio/gather-result', async (req, res) => {
 
     const callState = activeCalls.get(callSid);
     const targetLang = callState ? callState.language : 'en-US';
+
+    let twilioLang = targetLang;
+    let twilioVoice = 'alice';
+    if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
+        twilioLang = 'zh-TW';
+    } else if (targetLang.startsWith('zh')) {
+        twilioLang = 'zh-CN';
+    } else if (targetLang.startsWith('ja')) {
+        twilioLang = 'ja-JP';
+    } else {
+        twilioLang = 'en-US';
+    }
 
     if (transcribedText && callState) {
         console.log(`[Restaurant] ${transcribedText}`);
@@ -233,10 +259,10 @@ app.post('/twilio/gather-result', async (req, res) => {
             broadcastLog(callSid, 'agent', responseText);
 
             // Speak Gemini's answer, then go back to listening
-            twiml.say({ language: targetLang }, responseText);
+            twiml.say({ voice: twilioVoice, language: twilioLang }, responseText);
             twiml.gather({
                 input: 'speech',
-                language: targetLang,
+                language: twilioLang,
                 action: publicUrl + '/twilio/gather-result',
                 speechTimeout: 'auto',
                 timeout: 10
@@ -246,13 +272,13 @@ app.post('/twilio/gather-result', async (req, res) => {
             let errMsg = "I'm sorry, please say that again.";
             if (targetLang.startsWith('ja')) errMsg = "すみません、もう一度お願いします。";
             if (targetLang.startsWith('zh')) errMsg = "不好意思，可以請您再說一次嗎？";
-            twiml.say({ language: targetLang }, errMsg);
+            twiml.say({ voice: twilioVoice, language: twilioLang }, errMsg);
 
             // CRITICAL: We must re-initiate the gather block even if Gemini fails! 
             // If we don't, Twilio hits the end of the instructions and drops the call.
             twiml.gather({
                 input: 'speech',
-                language: targetLang,
+                language: twilioLang,
                 action: publicUrl + '/twilio/gather-result',
                 speechTimeout: 'auto',
                 timeout: 10
@@ -263,7 +289,7 @@ app.post('/twilio/gather-result', async (req, res) => {
         let hangupMsg = "I will call back later. Goodbye.";
         if (targetLang.startsWith('ja')) hangupMsg = "また後でかけ直します。失礼します。";
         if (targetLang.startsWith('zh')) hangupMsg = "我晚點再打來。再見。";
-        twiml.say({ language: targetLang }, hangupMsg);
+        twiml.say({ voice: twilioVoice, language: twilioLang }, hangupMsg);
         twiml.hangup();
         broadcastLog(callSid, 'system', 'Call Ended.');
         broadcastLog(callSid, 'status', 'completed');
