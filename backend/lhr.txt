@@ -19,3 +19,5 @@ https://localhost.run/docs/
 
 ** your connection id is deabf84e-6066-471a-8369-652eb7c93613, please mention it if you send me a message about an issue. **
 
+tcsetattr: Input/output error
+client_loop: send disconnect: Broken pipe
