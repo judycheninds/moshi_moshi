@@ -283,6 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const userPhone = document.getElementById('userPhone').value;
         const date = document.getElementById('date').value;
         const time = document.getElementById('time').value;
+        const altTime1 = document.getElementById('altTime1').value;
+        const altTime2 = document.getElementById('altTime2').value;
         const people = document.getElementById('people').value;
 
         agentContainer.classList.add('calling');
@@ -295,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('https://moshi-moshi-8dh6.onrender.com/api/real-call', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, userName, userPhone, date, time, people, language: navigator.language || 'en-US' })
+            body: JSON.stringify({ phone, userName, userPhone, date, time, altTime1, altTime2, people, language: navigator.language || 'en-US' })
         }).then(res => res.json())
             .then(data => {
                 if (data.success) {

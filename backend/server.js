@@ -123,7 +123,7 @@ app.get('/api/call-stream/:callSid', (req, res) => {
 
 // Route called by Frontend to trigger a REAL out-bound call
 app.post('/api/real-call', async (req, res) => {
-    let { phone, date, time, people, language, userName, userPhone } = req.body;
+    let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone } = req.body;
 
     // Helper to silently fix non-E164 local phone numbers (like 0912... -> +886912...)
     const formatPhone = (ph, langStr) => {
@@ -169,9 +169,14 @@ app.post('/api/real-call', async (req, res) => {
             from: process.env.TWILIO_PHONE_NUMBER
         });
 
+        let fallbackText = '';
+        if (altTime1 || altTime2) {
+            fallbackText = ` If ${time} is unavailable, you MUST ask for available fallback times. The user specifically approved ${[altTime1, altTime2].filter(Boolean).join(' or ')} as acceptable alternative times. Attempt to book these if offered.`;
+        }
+
         // Store the goal state of this call ID
         activeCalls.set(call.sid, {
-            goal: `Book a table for ${people} people under the name "${userName}" on ${date} at ${time}.`,
+            goal: `Book a table for ${people} people under the name "${userName}" on ${date} at ${time}.${fallbackText}`,
             language: language || 'en-US',
             userName: userName || 'User',
             userPhone: userPhone || 'Not provided',
