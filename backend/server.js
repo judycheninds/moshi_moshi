@@ -163,6 +163,8 @@ app.post('/api/real-call', async (req, res) => {
     try {
         const call = await twilioClient.calls.create({
             url: `${publicUrl}/twilio/voice`, // Twilio will ping this when call connects
+            statusCallback: `${publicUrl}/twilio/call-status`,
+            statusCallbackEvent: ['completed'],
             to: phone,
             from: process.env.TWILIO_PHONE_NUMBER
         });
@@ -332,12 +334,45 @@ app.post('/twilio/gather-result', async (req, res) => {
         if (targetLang.startsWith('zh')) hangupMsg = "我晚點再打來。再見。";
         twiml.say({ voice: twilioVoice, language: sayLang }, hangupMsg);
         twiml.hangup();
-        broadcastLog(callSid, 'system', 'Call Ended.');
-        broadcastLog(callSid, 'status', 'completed');
+        // The /twilio/call-status webhook will automatically trigger evaluation when this hangs up.
     }
 
     res.type('text/xml');
     res.send(twiml.toString());
+});
+
+// Twilio calls this when the physical phone call disconnects
+app.post('/twilio/call-status', async (req, res) => {
+    const callSid = req.body.CallSid;
+    const callState = activeCalls.get(callSid);
+
+    if (callState && req.body.CallStatus === 'completed') {
+        broadcastLog(callSid, 'system', 'Call Ended. Evaluating success...');
+
+        try {
+            const prompt = `
+                Review the following phone conversation between an AI assistant acting on behalf of a user and a restaurant.
+                Did the restaurant explicitly confirm and accept the reservation? Keep in mind they might have said "no", "we are full", or just hung up.
+                Conversation:
+                ${callState.history.map(m => '[' + m.role + ']: ' + m.content).join('\n')}
+                
+                Reply with strictly a JSON object: {"success": true} if booked successfully, or {"success": false} if it failed.
+            `;
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const result = await model.generateContent(prompt);
+            const text = result.response.text().trim().toLowerCase();
+
+            const isSuccess = text.includes('"success": true') || text.includes('"success":true');
+            broadcastLog(callSid, 'status', isSuccess ? 'success' : 'failed');
+        } catch (e) {
+            console.error(e);
+            broadcastLog(callSid, 'status', 'failed');
+        }
+
+        activeCalls.delete(callSid);
+    }
+
+    res.sendStatus(200);
 });
 
 // ==========================================

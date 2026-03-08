@@ -309,10 +309,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     eventSource.onmessage = (e) => {
                         const msg = JSON.parse(e.data);
-                        if (msg.role === 'status' && msg.content === 'completed') {
+                        if (msg.role === 'status') {
                             eventSource.close();
                             clearTimeout(emergencyTimeout);
-                            finishCall(true, date, time, people, userPhone, userName);
+                            if (msg.content === 'success') {
+                                finishCall(true, date, time, people, userPhone, userName);
+                            } else {
+                                finishCall(false, date, time, people, userPhone, userName);
+                            }
                         } else if (msg.role === 'agent') {
                             addLog(msg.content, 'agent');
                         } else if (msg.role === 'restaurant') {
@@ -324,7 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     eventSource.onerror = () => {
                         eventSource.close();
-                        finishCall(true, date, time, people, userPhone, userName);
+                        clearTimeout(emergencyTimeout);
+                        finishCall(false, date, time, people, userPhone, userName);
                     };
 
                     // Absolute fallback if the AI somehow gets stuck in an infinite loop
