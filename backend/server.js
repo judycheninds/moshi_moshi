@@ -174,9 +174,16 @@ app.post('/api/real-call', async (req, res) => {
             fallbackText = ` If ${time} is unavailable, you MUST ask for available fallback times. The user specifically approved ${[altTime1, altTime2].filter(Boolean).join(' or ')} as acceptable alternative times. Attempt to book these if offered.`;
         }
 
+        let friendlyDate = date;
+        try {
+            const dateObj = new Date(date);
+            // Formats to just Month and Day, like "March 14" or "March 8"
+            friendlyDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+        } catch (e) { }
+
         // Store the goal state of this call ID
         activeCalls.set(call.sid, {
-            goal: `Book a table for ${people} people under the name "${userName}" on ${date} at ${time}.${fallbackText}`,
+            goal: `Book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${time}.${fallbackText} CRITICAL: Never speak the year out loud.`,
             language: language || 'en-US',
             userName: userName || 'User',
             userPhone: userPhone || 'Not provided',
@@ -205,19 +212,19 @@ app.post('/twilio/voice', (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW'; // Specific STT for Taiwan
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-TW-Wavenet-A';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-CN-Wavenet-A';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Polly.Kazuha-Neural';
+        twilioVoice = 'Google.ja-JP-Neural2-B';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Salli-Neural';
+        twilioVoice = 'Google.en-US-Journey-F';
     }
 
     // The initial thing the AI says to start the conversation
@@ -242,7 +249,7 @@ app.post('/twilio/voice', (req, res) => {
         input: 'speech',
         language: gatherLang,
         action: publicUrl + '/twilio/gather-result',
-        speechTimeout: 'auto', // Restore to auto to prevent Twilio default 5s fallback penalty
+        speechTimeout: '1', // 1-second silence wait matches exactly with the internal API processing time to simulate a 2-second conversational pause perfectly
         timeout: 10
     });
 
@@ -265,19 +272,19 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW';
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-TW-Wavenet-A';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-CN-Wavenet-A';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Polly.Kazuha-Neural';
+        twilioVoice = 'Google.ja-JP-Neural2-B';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Salli-Neural';
+        twilioVoice = 'Google.en-US-Journey-F';
     }
 
     if (transcribedText && callState) {
@@ -323,7 +330,7 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: publicUrl + '/twilio/gather-result',
-                speechTimeout: 'auto',
+                speechTimeout: '1',
                 timeout: 10
             });
         } catch (e) {
@@ -339,7 +346,7 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: publicUrl + '/twilio/gather-result',
-                speechTimeout: 'auto',
+                speechTimeout: '1',
                 timeout: 10
             });
         }
