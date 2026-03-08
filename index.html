@@ -115,34 +115,6 @@
                                 </div>
                             </div>
 
-                            <div class="form-separator"></div>
-
-                            <h3><i class="fa-regular fa-credit-card"></i> <span data-i18n="deposit-title">Deposit
-                                    Method</span></h3>
-                            <p class="small-text text-muted" data-i18n="deposit-desc">A credit card is required. Some
-                                premium Japanese
-                                restaurants mandate a deposit. You will only be charged if the restaurant requests it.
-                            </p>
-
-                            <div class="form-group">
-                                <label for="cc-name" data-i18n="label-cc-name">Cardholder Name</label>
-                                <input type="text" id="cc-name" placeholder="John Doe" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="cc-number" data-i18n="label-cc-number">Card Number</label>
-                                <input type="text" id="cc-number" placeholder="0000 0000 0000 0000" maxlength="19"
-                                    required>
-                            </div>
-                            <div class="row">
-                                <div class="form-group half">
-                                    <label for="cc-exp" data-i18n="label-cc-exp">Expiry (MM/YY)</label>
-                                    <input type="text" id="cc-exp" placeholder="MM/YY" maxlength="5" required>
-                                </div>
-                                <div class="form-group half">
-                                    <label for="cc-cvc" data-i18n="label-cc-cvc">CVC</label>
-                                    <input type="password" id="cc-cvc" placeholder="123" maxlength="4" required>
-                                </div>
-                            </div>
 
                             <button type="submit" class="btn-primary submit-btn" id="callBtn">
                                 <span class="btn-text" data-i18n="btn-call">Initiate AI Call</span>
@@ -227,6 +199,46 @@
                     <label for="password" data-i18n="label-password">Password</label>
                     <input type="password" id="password" placeholder="••••••••" required>
                 </div>
+                <div id="signupFields" class="hidden">
+                    <div class="form-separator" style="margin: 1.5rem 0 1rem 0;"></div>
+                    <div class="form-group">
+                        <label for="modal-name"><i class="fa-solid fa-user"></i> <span data-i18n="label-userName">Your
+                                Name</span></label>
+                        <input type="text" id="modal-name" placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-userPhone"><i class="fa-solid fa-mobile-screen"></i> <span
+                                data-i18n="label-userPhone">Your Phone Number (For SMS Confirmation)</span></label>
+                        <input type="tel" id="modal-userPhone" placeholder="+1 555-XXXX-XXXX">
+                    </div>
+
+                    <div class="form-separator" style="margin: 1.5rem 0 1rem 0;"></div>
+                    <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;"><i class="fa-regular fa-credit-card"></i>
+                        <span data-i18n="deposit-title">Deposit Method</span></h3>
+                    <p class="small-text text-muted" data-i18n="deposit-desc" style="margin-bottom: 1rem;">A credit card
+                        is required. Some premium Japanese restaurants mandate a deposit. You will only be charged if
+                        the restaurant requests it.</p>
+
+                    <div class="form-group">
+                        <label for="modal-cc-name" data-i18n="label-cc-name">Cardholder Name</label>
+                        <input type="text" id="modal-cc-name" placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-cc-number" data-i18n="label-cc-number">Card Number</label>
+                        <input type="text" id="modal-cc-number" placeholder="0000 0000 0000 0000" maxlength="19">
+                    </div>
+                    <div class="row">
+                        <div class="form-group half">
+                            <label for="modal-cc-exp" data-i18n="label-cc-exp">Expiry (MM/YY)</label>
+                            <input type="text" id="modal-cc-exp" placeholder="MM/YY" maxlength="5">
+                        </div>
+                        <div class="form-group half">
+                            <label for="modal-cc-cvc" data-i18n="label-cc-cvc">CVC</label>
+                            <input type="password" id="modal-cc-cvc" placeholder="123" maxlength="4">
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" id="modalSubmitBtn" class="btn-primary full-width" data-i18n="btn-signin">Sign
                     In</button>
             </form>

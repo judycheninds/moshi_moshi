@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalSubmitBtn = document.getElementById('modalSubmitBtn');
     const modalToggleText = document.getElementById('modalToggleText');
     const modalToggleBtn = document.getElementById('modalToggleBtn');
+    const signupFields = document.getElementById('signupFields');
 
     let isSignUpMode = false;
 
@@ -63,6 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             modalToggleBtn.setAttribute('data-i18n', 'btn-signin');
             modalToggleBtn.textContent = translateStr('btn-signin');
+
+            signupFields.classList.remove('hidden');
         } else {
             modalTitle.setAttribute('data-i18n', 'modal-title');
             modalTitle.textContent = translateStr('modal-title');
@@ -78,6 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             modalToggleBtn.setAttribute('data-i18n', 'modal-signup');
             modalToggleBtn.textContent = translateStr('modal-signup');
+
+            signupFields.classList.add('hidden');
         }
     });
 
@@ -102,6 +107,21 @@ document.addEventListener('DOMContentLoaded', () => {
         modalSubmitBtn.innerHTML = isSignUpMode ? translateStr("signing-up") : translateStr("signing-in");
 
         setTimeout(() => {
+            const modalName = document.getElementById('modal-name').value;
+            const modalPhone = document.getElementById('modal-userPhone').value;
+
+            if (isSignUpMode && modalName) {
+                document.getElementById('userName').value = modalName;
+            } else if (!isSignUpMode) {
+                document.getElementById('userName').value = "Judy Chen";
+            }
+
+            if (isSignUpMode && modalPhone) {
+                document.getElementById('userPhone').value = modalPhone;
+            } else if (!isSignUpMode) {
+                document.getElementById('userPhone').value = "+1 555-0199";
+            }
+
             loginModal.classList.add('hidden');
             loginBtn.innerHTML = `<span>${translateStr("my-account")}</span> <i class="fa-solid fa-user"></i>`;
             modalSubmitBtn.innerHTML = originalText;
