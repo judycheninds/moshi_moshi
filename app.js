@@ -303,12 +303,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     addLog(translateStr('twilio-call-sid') + ' ' + data.callSid, 'system');
                     agentStatusText.textContent = translateStr('call-live');
 
-                    // Keep the UI in a "Calling" state for 25 seconds while you talk to it!
-                    addLog(translateStr('pick-up'), 'agent');
+                    // Listen to the live conversation via SSE
+                    const eventSource = new EventSource(`https://moshi-moshi-8dh6.onrender.com/api/call-stream/${data.callSid}`);
+                    let emergencyTimeout;
 
-                    setTimeout(() => {
+                    eventSource.onmessage = (e) => {
+                        const msg = JSON.parse(e.data);
+                        if (msg.role === 'status' && msg.content === 'completed') {
+                            eventSource.close();
+                            clearTimeout(emergencyTimeout);
+                            finishCall(true, date, time, people, userPhone, userName);
+                        } else if (msg.role === 'agent') {
+                            addLog(msg.content, 'agent');
+                        } else if (msg.role === 'restaurant') {
+                            addLog(msg.content, 'user'); // Styles the restaurant text cleanly in grey
+                        } else if (msg.role === 'system') {
+                            addLog(msg.content, 'system');
+                        }
+                    };
+
+                    eventSource.onerror = () => {
+                        eventSource.close();
                         finishCall(true, date, time, people, userPhone, userName);
-                    }, 25000); // 25s timeout for demo
+                    };
+
+                    // Absolute fallback if the AI somehow gets stuck in an infinite loop
+                    emergencyTimeout = setTimeout(() => {
+                        eventSource.close();
+                        finishCall(true, date, time, people, userPhone, userName);
+                    }, 60000); // 60s maximum duration
 
                 } else {
                     addLog(`${translateStr('error-prefix')} ${data.error}`, 'error');

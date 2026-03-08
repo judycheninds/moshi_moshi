@@ -19,6 +19,14 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Active Call State Storage (in-memory for demo purposes)
 const activeCalls = new Map();
+const callLogClients = new Map();
+
+function broadcastLog(callSid, role, content) {
+    const clients = callLogClients.get(callSid) || [];
+    clients.forEach(res => {
+        res.write(`data: ${JSON.stringify({ role, content })}\n\n`);
+    });
+}
 
 // Initialize Twilio conditionally (prevents crashing if not set up yet)
 let twilioClient = null;
@@ -92,6 +100,23 @@ Make the dialog realistic (about 6-8 turns total), confirm the date/time/pax, an
     }
 });
 
+app.get('/api/call-stream/:callSid', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const callSid = req.params.callSid;
+    if (!callLogClients.has(callSid)) {
+        callLogClients.set(callSid, []);
+    }
+    callLogClients.get(callSid).push(res);
+
+    req.on('close', () => {
+        const clients = callLogClients.get(callSid) || [];
+        callLogClients.set(callSid, clients.filter(c => c !== res));
+    });
+});
+
 // ==========================================
 // 2. REAL TWILIO + GEMINI PHONE PIPELINE
 // ==========================================
@@ -142,6 +167,7 @@ app.post('/twilio/voice', (req, res) => {
     // Save to history
     if (callState) {
         callState.history.push({ role: 'user', content: greeting }); // AI plays "user" role to the model
+        broadcastLog(callSid, 'agent', greeting);
     }
 
     // Use Twilio's neural voice mapped to local language
@@ -172,6 +198,7 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (transcribedText && callState) {
         console.log(`[Restaurant] ${transcribedText}`);
         callState.history.push({ role: 'model', content: transcribedText }); // The restaurant is playing the "prompt"
+        broadcastLog(callSid, 'restaurant', transcribedText);
 
         // Build the prompt for Gemini to decide what the AI should say next
         const prompt = `
@@ -203,6 +230,7 @@ app.post('/twilio/gather-result', async (req, res) => {
 
             console.log(`[AI Agent] ${responseText}`);
             callState.history.push({ role: 'user', content: responseText });
+            broadcastLog(callSid, 'agent', responseText);
 
             // Speak Gemini's answer, then go back to listening
             twiml.say({ language: targetLang }, responseText);
@@ -237,6 +265,8 @@ app.post('/twilio/gather-result', async (req, res) => {
         if (targetLang.startsWith('zh')) hangupMsg = "我晚點再打來。再見。";
         twiml.say({ language: targetLang }, hangupMsg);
         twiml.hangup();
+        broadcastLog(callSid, 'system', 'Call Ended.');
+        broadcastLog(callSid, 'status', 'completed');
     }
 
     res.type('text/xml');
