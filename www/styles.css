@@ -518,6 +518,12 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     border-bottom: none;
 }
 
+#resultTranscript .log-entry {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
 /* Result Card */
 .result-card {
     position: absolute;

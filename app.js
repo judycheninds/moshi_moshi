@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else if (msg.role === 'agent') {
                             addLog(msg.content, 'agent');
                         } else if (msg.role === 'restaurant') {
-                            addLog(msg.content, 'user'); // Styles the restaurant text cleanly in grey
+                            addLog(msg.content, 'restaurant'); // Styles the restaurant text correctly
                         } else if (msg.role === 'system') {
                             addLog(msg.content, 'system');
                         }
@@ -352,11 +352,27 @@ document.addEventListener('DOMContentLoaded', () => {
         agentContainer.classList.remove('calling');
         agentStatusText.textContent = translateStr('agent-standby');
 
-        const resultTranscript = document.getElementById('resultTranscript');
-        if (resultTranscript) {
-            resultTranscript.innerHTML = callLogContainer.innerHTML;
-            resultTranscript.scrollTop = resultTranscript.scrollHeight;
+        let resultTranscript = document.getElementById('resultTranscript');
+        if (!resultTranscript) {
+            // Circumvent index.html device caching
+            resultTranscript = document.createElement('div');
+            resultTranscript.id = 'resultTranscript';
+            resultTranscript.className = 'call-log';
+            resultTranscript.style.cssText = 'height: 200px; overflow-y: auto; overflow-x: hidden; margin-bottom: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; width: 100%; text-align: left;';
+            resultCard.insertBefore(resultTranscript, resetBtn);
         }
+
+        resultTranscript.innerHTML = callLogContainer.innerHTML;
+
+        // Ensure child elements stay permanently visible inside the container
+        const logEntries = resultTranscript.querySelectorAll('.log-entry');
+        logEntries.forEach(entry => {
+            entry.style.animation = 'none';
+            entry.style.opacity = '1';
+            entry.style.transform = 'none';
+        });
+
+        resultTranscript.scrollTop = resultTranscript.scrollHeight;
 
         // Simulate success vs failure
         if (success) {
