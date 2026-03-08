@@ -200,20 +200,24 @@ app.post('/twilio/voice', (req, res) => {
     // Helper to map browser language to explicit Twilio engines
     let sayLang = targetLang;
     let gatherLang = targetLang;
-    let twilioVoice = 'alice'; // Alice is the most reliable multilingual basic fallback
+    let twilioVoice = 'alice';
 
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW'; // Specific STT for Taiwan
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
+        twilioVoice = 'Polly.Kazuha-Neural';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
+        twilioVoice = 'Polly.Joanna-Neural';
     }
 
     // The initial thing the AI says to start the conversation
@@ -261,15 +265,19 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW';
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
+        twilioVoice = 'Polly.Kazuha-Neural';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
+        twilioVoice = 'Polly.Joanna-Neural';
     }
 
     if (transcribedText && callState) {
