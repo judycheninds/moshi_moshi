@@ -205,19 +205,19 @@ app.post('/twilio/voice', (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW'; // Specific STT for Taiwan
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-TW-Wavenet-A';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-CN-Wavenet-A';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Polly.Kazuha-Neural';
+        twilioVoice = 'Google.ja-JP-Neural2-B';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Joanna-Neural';
+        twilioVoice = 'Google.en-US-Journey-F';
     }
 
     // The initial thing the AI says to start the conversation
@@ -242,7 +242,7 @@ app.post('/twilio/voice', (req, res) => {
         input: 'speech',
         language: gatherLang,
         action: publicUrl + '/twilio/gather-result',
-        speechTimeout: 'auto', // Wait until they stop talking
+        speechTimeout: '1.2', // Reduce silence threshold to reply significantly faster
         timeout: 10
     });
 
@@ -265,19 +265,19 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW';
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-TW-Wavenet-A';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-CN-Wavenet-A';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Polly.Kazuha-Neural';
+        twilioVoice = 'Google.ja-JP-Neural2-B';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Joanna-Neural';
+        twilioVoice = 'Google.en-US-Journey-F';
     }
 
     if (transcribedText && callState) {
@@ -317,16 +317,13 @@ app.post('/twilio/gather-result', async (req, res) => {
             callState.history.push({ role: 'user', content: responseText });
             broadcastLog(callSid, 'agent', responseText);
 
-            // Simulate organic conversational delay so the AI doesn't brutally interrupt the human the exact millisecond they finish talking
-            twiml.pause({ length: 1 });
-
             // Speak Gemini's answer, then go back to listening
             twiml.say({ voice: twilioVoice, language: sayLang }, responseText);
             twiml.gather({
                 input: 'speech',
                 language: gatherLang,
                 action: publicUrl + '/twilio/gather-result',
-                speechTimeout: 'auto',
+                speechTimeout: '1.2',
                 timeout: 10
             });
         } catch (e) {
@@ -342,7 +339,7 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: publicUrl + '/twilio/gather-result',
-                speechTimeout: 'auto',
+                speechTimeout: '1.2',
                 timeout: 10
             });
         }
