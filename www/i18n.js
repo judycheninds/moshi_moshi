@@ -42,6 +42,11 @@ const translations = {
         "modal-desc-signup": "Sign up to track your reservations and save time.",
         "modal-has-account": "Already have an account?",
         "signing-up": "Creating account...",
+        "personal-title": "Personal Information",
+        "personal-desc": "Basic contact details to personalize your reservations.",
+        "label-address": "Billing Address",
+        "btn-next": "Next",
+        "btn-prev": "Back",
 
         "dialing": "Dialing",
         "real-call-initiated": "Real Phone Call Initiated!",
@@ -101,6 +106,11 @@ const translations = {
         "modal-desc-signup": "快速註冊以追蹤您的預約紀錄。",
         "modal-has-account": "已經有帳號了嗎？",
         "signing-up": "帳戶建立中...",
+        "personal-title": "個人資訊",
+        "personal-desc": "基本聯絡資料，提供專屬的預約體驗。",
+        "label-address": "帳單地址",
+        "btn-next": "下一頁",
+        "btn-prev": "上一頁",
 
         "dialing": "正在撥號",
         "real-call-initiated": "已發起真實電話！",

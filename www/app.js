@@ -40,9 +40,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalSubmitBtn = document.getElementById('modalSubmitBtn');
     const modalToggleText = document.getElementById('modalToggleText');
     const modalToggleBtn = document.getElementById('modalToggleBtn');
-    const signupFields = document.getElementById('signupFields');
+
+    // Multi-step signup elements
+    const stepAccount = document.getElementById('step-account');
+    const stepPersonal = document.getElementById('step-personal');
+    const stepPayment = document.getElementById('step-payment');
+    const stepButtons = document.getElementById('step-buttons');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
 
     let isSignUpMode = false;
+    let currentSignUpStep = 0;
+
+    function updateSignUpSteps() {
+        if (!isSignUpMode) {
+            stepAccount.classList.remove('hidden');
+            stepPersonal.classList.add('hidden');
+            stepPayment.classList.add('hidden');
+            stepButtons.classList.add('hidden');
+            modalSubmitBtn.classList.remove('hidden');
+            return;
+        }
+
+        stepAccount.classList.toggle('hidden', currentSignUpStep !== 0);
+        stepPersonal.classList.toggle('hidden', currentSignUpStep !== 1);
+        stepPayment.classList.toggle('hidden', currentSignUpStep !== 2);
+
+        stepButtons.classList.remove('hidden');
+
+        if (currentSignUpStep === 0) {
+            prevBtn.classList.add('hidden');
+            nextBtn.classList.remove('hidden');
+            modalSubmitBtn.classList.add('hidden');
+        } else if (currentSignUpStep === 1) {
+            prevBtn.classList.remove('hidden');
+            nextBtn.classList.remove('hidden');
+            modalSubmitBtn.classList.add('hidden');
+        } else if (currentSignUpStep === 2) {
+            prevBtn.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+            modalSubmitBtn.classList.remove('hidden');
+        }
+    }
+
+    nextBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentSignUpStep < 2) {
+            currentSignUpStep++;
+            updateSignUpSteps();
+        }
+    });
+
+    prevBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentSignUpStep > 0) {
+            currentSignUpStep--;
+            updateSignUpSteps();
+        }
+    });
 
     // Toggle Mode
     modalToggleBtn.addEventListener('click', (e) => {
@@ -65,7 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
             modalToggleBtn.setAttribute('data-i18n', 'btn-signin');
             modalToggleBtn.textContent = translateStr('btn-signin');
 
-            signupFields.classList.remove('hidden');
+            currentSignUpStep = 0;
+            updateSignUpSteps();
         } else {
             modalTitle.setAttribute('data-i18n', 'modal-title');
             modalTitle.textContent = translateStr('modal-title');
@@ -82,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modalToggleBtn.setAttribute('data-i18n', 'modal-signup');
             modalToggleBtn.textContent = translateStr('modal-signup');
 
-            signupFields.classList.add('hidden');
+            updateSignUpSteps();
         }
     });
 
