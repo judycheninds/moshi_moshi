@@ -151,21 +151,26 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="agentLang"><i class="fa-solid fa-language"></i> <span data-i18n="label-agentLang">Agent Call Language</span></label>
+                                <label for="agentLang"><i class="fa-solid fa-language"></i> <span
+                                        data-i18n="label-agentLang">Agent Call Language</span></label>
                                 <div class="agent-lang-selector" id="agentLangSelector">
-                                    <button type="button" class="agent-lang-option active" data-lang-value="ja-JP" id="agentLangJa">
+                                    <button type="button" class="agent-lang-option active" data-lang-value="ja-JP"
+                                        id="agentLangJa">
                                         <span class="lang-flag">🇯🇵</span>
                                         <span class="lang-name" data-i18n="lang-ja">Japanese</span>
                                     </button>
-                                    <button type="button" class="agent-lang-option" data-lang-value="en-US" id="agentLangEn">
+                                    <button type="button" class="agent-lang-option" data-lang-value="en-US"
+                                        id="agentLangEn">
                                         <span class="lang-flag">🇺🇸</span>
                                         <span class="lang-name" data-i18n="lang-en">English</span>
                                     </button>
-                                    <button type="button" class="agent-lang-option" data-lang-value="zh-TW" id="agentLangZhTW">
+                                    <button type="button" class="agent-lang-option" data-lang-value="zh-TW"
+                                        id="agentLangZhTW">
                                         <span class="lang-flag">🇹🇼</span>
                                         <span class="lang-name" data-i18n="lang-zh-TW">Mandarin (TW)</span>
                                     </button>
-                                    <button type="button" class="agent-lang-option" data-lang-value="zh-CN" id="agentLangZhCN">
+                                    <button type="button" class="agent-lang-option" data-lang-value="zh-CN"
+                                        id="agentLangZhCN">
                                         <span class="lang-flag">🇨🇳</span>
                                         <span class="lang-name" data-i18n="lang-zh-CN">Mandarin (CN)</span>
                                     </button>
@@ -252,6 +257,8 @@
             <p id="modalDesc" data-i18n="modal-desc">Sign in to access your reservation history and saved payment
                 methods.</p>
             <form id="loginForm">
+                <!-- Error message -->
+                <div id="modalError" class="modal-error hidden"></div>
                 <!-- Step 1: Account Info -->
                 <div id="step-account" class="signup-step">
                     <div class="form-group">
@@ -333,6 +340,32 @@
         </div>
     </div>
 
+    <!-- CRM Dashboard Modal -->
+    <div class="modal-overlay hidden" id="crmDashboard">
+        <div class="modal crm-modal glass-panel">
+            <button class="close-btn" id="crmCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+
+            <div class="crm-header">
+                <div class="crm-avatar"><i class="fa-solid fa-user-circle"></i></div>
+                <div class="crm-profile-info">
+                    <h2 id="crm-name">—</h2>
+                    <p id="crm-email" class="crm-meta"><i class="fa-solid fa-envelope"></i> —</p>
+                    <p id="crm-phone" class="crm-meta"><i class="fa-solid fa-phone"></i> —</p>
+                </div>
+            </div>
+
+            <div class="crm-section">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Reservation History</h3>
+                <div id="crm-history" class="crm-history">
+                    <div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+                </div>
+            </div>
+
+            <button id="crmLogoutBtn" class="btn-secondary crm-logout">
+                <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+            </button>
+        </div>
+    </div>
     <script src="i18n.js"></script>
     <script src="app.js"></script>
     <script>

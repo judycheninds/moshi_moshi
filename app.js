@@ -59,29 +59,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ---- Auth State ----
+    const API = 'https://moshi-moshi-8dh6.onrender.com';
+    let authToken = localStorage.getItem('mm_token') || null;
+    let currentUser = JSON.parse(localStorage.getItem('mm_user') || 'null');
+
+    function setAuth(token, user) {
+        authToken = token;
+        currentUser = user;
+        localStorage.setItem('mm_token', token);
+        localStorage.setItem('mm_user', JSON.stringify(user));
+        loginBtn.innerHTML = `<span>${user.name}</span> <i class="fa-solid fa-user"></i>`;
+        // Pre-fill form
+        if (document.getElementById('userName')) document.getElementById('userName').value = user.name;
+        if (document.getElementById('userPhone')) document.getElementById('userPhone').value = user.phone || '';
+    }
+
+    function clearAuth() {
+        authToken = null;
+        currentUser = null;
+        localStorage.removeItem('mm_token');
+        localStorage.removeItem('mm_user');
+        loginBtn.innerHTML = `<span data-i18n="nav-login">Login / Sign Up</span> <i class="fa-solid fa-arrow-right-to-bracket"></i>`;
+    }
+
+    // Auto-restore session
+    if (authToken && currentUser) {
+        loginBtn.innerHTML = `<span>${currentUser.name}</span> <i class="fa-solid fa-user"></i>`;
+        if (document.getElementById('userName')) document.getElementById('userName').value = currentUser.name;
+        if (document.getElementById('userPhone')) document.getElementById('userPhone').value = currentUser.phone || '';
+    }
+
     // ---- Login Modal Logic ----
-    const loginBtn = document.getElementById('loginBtn');
     const loginModal = document.getElementById('loginModal');
     const closeModal = document.getElementById('closeModal');
     const loginForm = document.getElementById('loginForm');
-
-    // Elements for toggling between Sign In and Sign Up
     const modalTitle = document.getElementById('modalTitle');
     const modalDesc = document.getElementById('modalDesc');
     const modalSubmitBtn = document.getElementById('modalSubmitBtn');
     const modalToggleText = document.getElementById('modalToggleText');
     const modalToggleBtn = document.getElementById('modalToggleBtn');
-
-    // Multi-step signup elements
     const stepAccount = document.getElementById('step-account');
     const stepPersonal = document.getElementById('step-personal');
     const stepPayment = document.getElementById('step-payment');
     const stepButtons = document.getElementById('step-buttons');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
+    const modalErrorEl = document.getElementById('modalError');
 
     let isSignUpMode = false;
     let currentSignUpStep = 0;
+
+    function showModalError(msg) {
+        if (modalErrorEl) { modalErrorEl.textContent = msg; modalErrorEl.classList.remove('hidden'); }
+    }
+    function hideModalError() {
+        if (modalErrorEl) { modalErrorEl.classList.add('hidden'); }
+    }
 
     function updateSignUpSteps() {
         if (!isSignUpMode) {
@@ -92,129 +126,143 @@ document.addEventListener('DOMContentLoaded', () => {
             modalSubmitBtn.classList.remove('hidden');
             return;
         }
-
         stepAccount.classList.toggle('hidden', currentSignUpStep !== 0);
         stepPersonal.classList.toggle('hidden', currentSignUpStep !== 1);
         stepPayment.classList.toggle('hidden', currentSignUpStep !== 2);
-
         stepButtons.classList.remove('hidden');
-
         if (currentSignUpStep === 0) {
-            prevBtn.classList.add('hidden');
-            nextBtn.classList.remove('hidden');
-            modalSubmitBtn.classList.add('hidden');
+            prevBtn.classList.add('hidden'); nextBtn.classList.remove('hidden'); modalSubmitBtn.classList.add('hidden');
         } else if (currentSignUpStep === 1) {
-            prevBtn.classList.remove('hidden');
-            nextBtn.classList.remove('hidden');
-            modalSubmitBtn.classList.add('hidden');
+            prevBtn.classList.remove('hidden'); nextBtn.classList.remove('hidden'); modalSubmitBtn.classList.add('hidden');
         } else if (currentSignUpStep === 2) {
-            prevBtn.classList.remove('hidden');
-            nextBtn.classList.add('hidden');
-            modalSubmitBtn.classList.remove('hidden');
+            prevBtn.classList.remove('hidden'); nextBtn.classList.add('hidden'); modalSubmitBtn.classList.remove('hidden');
         }
     }
 
-    nextBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (currentSignUpStep < 2) {
-            currentSignUpStep++;
-            updateSignUpSteps();
-        }
-    });
+    nextBtn.addEventListener('click', (e) => { e.preventDefault(); if (currentSignUpStep < 2) { currentSignUpStep++; updateSignUpSteps(); } });
+    prevBtn.addEventListener('click', (e) => { e.preventDefault(); if (currentSignUpStep > 0) { currentSignUpStep--; updateSignUpSteps(); } });
 
-    prevBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (currentSignUpStep > 0) {
-            currentSignUpStep--;
-            updateSignUpSteps();
-        }
-    });
-
-    // Toggle Mode
     modalToggleBtn.addEventListener('click', (e) => {
         e.preventDefault();
+        hideModalError();
         isSignUpMode = !isSignUpMode;
-
         if (isSignUpMode) {
-            modalTitle.setAttribute('data-i18n', 'modal-title-signup');
             modalTitle.textContent = translateStr('modal-title-signup');
-
-            modalDesc.setAttribute('data-i18n', 'modal-desc-signup');
             modalDesc.textContent = translateStr('modal-desc-signup');
-
-            modalSubmitBtn.setAttribute('data-i18n', 'modal-signup');
             modalSubmitBtn.textContent = translateStr('modal-signup');
-
-            modalToggleText.setAttribute('data-i18n', 'modal-has-account');
             modalToggleText.textContent = translateStr('modal-has-account');
-
-            modalToggleBtn.setAttribute('data-i18n', 'btn-signin');
             modalToggleBtn.textContent = translateStr('btn-signin');
-
-            currentSignUpStep = 0;
-            updateSignUpSteps();
+            currentSignUpStep = 0; updateSignUpSteps();
         } else {
-            modalTitle.setAttribute('data-i18n', 'modal-title');
             modalTitle.textContent = translateStr('modal-title');
-
-            modalDesc.setAttribute('data-i18n', 'modal-desc');
             modalDesc.textContent = translateStr('modal-desc');
-
-            modalSubmitBtn.setAttribute('data-i18n', 'btn-signin');
             modalSubmitBtn.textContent = translateStr('btn-signin');
-
-            modalToggleText.setAttribute('data-i18n', 'modal-no-account');
             modalToggleText.textContent = translateStr('modal-no-account');
-
-            modalToggleBtn.setAttribute('data-i18n', 'modal-signup');
             modalToggleBtn.textContent = translateStr('modal-signup');
-
             updateSignUpSteps();
         }
     });
 
     loginBtn.addEventListener('click', (e) => {
         e.preventDefault();
+        // If already logged in, open CRM dashboard instead
+        if (authToken && currentUser) {
+            openCRMDashboard();
+            return;
+        }
+        hideModalError();
         loginModal.classList.remove('hidden');
     });
 
-    closeModal.addEventListener('click', () => {
-        loginModal.classList.add('hidden');
-    });
+    closeModal.addEventListener('click', () => loginModal.classList.add('hidden'));
+    loginModal.addEventListener('click', (e) => { if (e.target === loginModal) loginModal.classList.add('hidden'); });
 
-    loginModal.addEventListener('click', (e) => {
-        if (e.target === loginModal) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideModalError();
+        const originalText = modalSubmitBtn.innerHTML;
+        modalSubmitBtn.disabled = true;
+        modalSubmitBtn.innerHTML = isSignUpMode ? translateStr('signing-up') : translateStr('signing-in');
+
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        try {
+            if (isSignUpMode) {
+                const name = document.getElementById('modal-name').value.trim();
+                const phone = document.getElementById('modal-userPhone').value.trim();
+                if (!name) { showModalError('Please enter your name.'); modalSubmitBtn.disabled = false; modalSubmitBtn.innerHTML = originalText; return; }
+                const res = await fetch(`${API}/api/auth/register`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, name, phone })
+                });
+                const data = await res.json();
+                if (!res.ok) { showModalError(data.error || 'Registration failed.'); modalSubmitBtn.disabled = false; modalSubmitBtn.innerHTML = originalText; return; }
+                setAuth(data.token, data.user);
+            } else {
+                const res = await fetch(`${API}/api/auth/login`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (!res.ok) { showModalError(data.error || 'Login failed.'); modalSubmitBtn.disabled = false; modalSubmitBtn.innerHTML = originalText; return; }
+                setAuth(data.token, data.user);
+            }
             loginModal.classList.add('hidden');
+            loginForm.reset();
+            modalSubmitBtn.disabled = false;
+            modalSubmitBtn.innerHTML = originalText;
+        } catch (err) {
+            showModalError('Network error. Please try again.');
+            modalSubmitBtn.disabled = false;
+            modalSubmitBtn.innerHTML = originalText;
         }
     });
 
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const originalText = modalSubmitBtn.innerHTML;
-        modalSubmitBtn.innerHTML = isSignUpMode ? translateStr("signing-up") : translateStr("signing-in");
+    // ---- CRM Dashboard ----
+    async function openCRMDashboard() {
+        const dashboard = document.getElementById('crmDashboard');
+        if (!dashboard) return;
+        dashboard.classList.remove('hidden');
 
-        setTimeout(() => {
-            const modalName = document.getElementById('modal-name').value;
-            const modalPhone = document.getElementById('modal-userPhone').value;
+        // Load profile
+        document.getElementById('crm-name').textContent = currentUser.name;
+        document.getElementById('crm-email').textContent = currentUser.email;
+        document.getElementById('crm-phone').textContent = currentUser.phone || '—';
 
-            if (isSignUpMode && modalName) {
-                document.getElementById('userName').value = modalName;
-            } else if (!isSignUpMode) {
-                document.getElementById('userName').value = "Judy Chen";
+        // Load reservation history
+        const historyEl = document.getElementById('crm-history');
+        historyEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+        try {
+            const res = await fetch(`${API}/api/reservations`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const reservations = await res.json();
+            if (!reservations.length) {
+                historyEl.innerHTML = '<div class="crm-empty"><i class="fa-solid fa-calendar-xmark"></i><p>No reservations yet.</p></div>';
+            } else {
+                historyEl.innerHTML = reservations.map(r => {
+                    const dateStr = r.date ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+                    return `
+                        <div class="crm-res-card">
+                            <div class="crm-res-status ${r.status}"><i class="fa-solid fa-circle-check"></i> ${r.status}</div>
+                            <div class="crm-res-main">
+                                <span class="crm-res-date"><i class="fa-regular fa-calendar"></i> ${dateStr} at ${r.time || '—'}</span>
+                                <span class="crm-res-people"><i class="fa-solid fa-users"></i> ${r.people} guests</span>
+                                <span class="crm-res-name"><i class="fa-solid fa-user"></i> ${r.guestName}</span>
+                            </div>
+                            <div class="crm-res-phone"><i class="fa-solid fa-phone"></i> ${r.restaurantPhone || '—'}</div>
+                        </div>`;
+                }).join('');
             }
+        } catch (e) {
+            historyEl.innerHTML = '<div class="crm-empty">Could not load history.</div>';
+        }
+    }
 
-            if (isSignUpMode && modalPhone) {
-                document.getElementById('userPhone').value = modalPhone;
-            } else if (!isSignUpMode) {
-                document.getElementById('userPhone').value = "+1 555-0199";
-            }
+    document.getElementById('crmCloseBtn')?.addEventListener('click', () => document.getElementById('crmDashboard').classList.add('hidden'));
+    document.getElementById('crmDashboard')?.addEventListener('click', (e) => { if (e.target === document.getElementById('crmDashboard')) document.getElementById('crmDashboard').classList.add('hidden'); });
+    document.getElementById('crmLogoutBtn')?.addEventListener('click', () => { clearAuth(); document.getElementById('crmDashboard').classList.add('hidden'); });
 
-            loginModal.classList.add('hidden');
-            loginBtn.innerHTML = `<span>${translateStr("my-account")}</span> <i class="fa-solid fa-user"></i>`;
-            modalSubmitBtn.innerHTML = originalText;
-            loginForm.reset();
-        }, 1500);
-    });
+
 
     // ---- Fill today's date ----
     const dateInput = document.getElementById('date');
@@ -296,7 +344,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Connect to our real Twilio + Gemini Node.js server!
         fetch('https://moshi-moshi-8dh6.onrender.com/api/real-call', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+            },
             body: JSON.stringify({ phone, userName, userPhone, date, time, altTime1, altTime2, people, language: document.getElementById('agentLang')?.value || 'ja-JP' })
         }).then(res => res.json())
             .then(data => {
