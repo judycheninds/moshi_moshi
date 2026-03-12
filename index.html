@@ -162,8 +162,32 @@
                             </div>
 
 
+                            <!-- Schedule Call Toggle -->
+                            <div class="form-group schedule-toggle-group">
+                                <label><i class="fa-solid fa-clock"></i> <span data-i18n="label-callMode">When to
+                                        Call</span></label>
+                                <div class="call-mode-tabs">
+                                    <button type="button" class="call-mode-tab active" id="modeNow" data-mode="now">
+                                        <i class="fa-solid fa-bolt"></i> <span data-i18n="mode-now">Call Now</span>
+                                    </button>
+                                    <button type="button" class="call-mode-tab" id="modeSched" data-mode="schedule">
+                                        <i class="fa-solid fa-calendar-plus"></i> <span
+                                            data-i18n="mode-schedule">Schedule</span>
+                                    </button>
+                                </div>
+                                <div id="schedulePickerWrap" class="schedule-picker hidden">
+                                    <label for="scheduledAt" class="schedule-label">
+                                        <i class="fa-solid fa-calendar-clock"></i>
+                                        <span data-i18n="label-scheduledAt">Call Date &amp; Time</span>
+                                    </label>
+                                    <input type="datetime-local" id="scheduledAt" class="schedule-datetime">
+                                    <p class="schedule-hint" data-i18n="schedule-hint">💡 We'll call the restaurant at
+                                        exactly this time. Great for scheduling when they open!</p>
+                                </div>
+                            </div>
+
                             <button type="submit" class="btn-primary submit-btn" id="callBtn">
-                                <span class="btn-text" data-i18n="btn-call">Initiate AI Call</span>
+                                <span class="btn-text" data-i18n="btn-call" id="callBtnText">Initiate AI Call</span>
                                 <div class="btn-loader hidden">
                                     <span class="dot"></span>
                                     <span class="dot"></span>

@@ -145,11 +145,125 @@ async function saveReservation(userId, data) {
         time: data.time,
         people: String(data.people),
         guest_name: data.guestName,
-        status: data.status || 'confirmed'
+        status: data.status || 'confirmed',
+        attempt_count: data.attemptCount || 1,
+        alternatives: data.alternatives || null,
+        notes: data.notes || null,
+        call_sid: data.callSid || null
     });
     if (error) console.error('❌ Failed to save reservation:', error.message);
     else console.log(`✅ Reservation saved to Supabase for user ${userId}`);
 }
+
+// Helper to send SMS status back to user
+async function sendStatusSMS(userPhone, message) {
+    if (!twilioClient || !userPhone || userPhone === 'Not provided') return;
+    try {
+        await twilioClient.messages.create({
+            body: `🍱 Moshi Moshi Agent: ${message}`,
+            from: process.env.TWILIO_PHONE_NUMBER,
+            to: userPhone
+        });
+        console.log(`✅ SMS sent to ${userPhone}`);
+    } catch (e) { console.error('❌ SMS failed:', e.message); }
+}
+
+// Core function: place an outbound Twilio call
+async function placeCall(params, attemptCount = 1) {
+    const { phone, userName, userPhone, date, time, altTime1, altTime2, people, language, userId, scheduledCallId } = params;
+
+    let friendlyDate = date;
+    try { friendlyDate = new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }); } catch (e) { }
+
+    let fallbackText = '';
+    if (altTime1 || altTime2) {
+        fallbackText = ` If ${time} is unavailable, also try: ${[altTime1, altTime2].filter(Boolean).join(' or ')}.`;
+    }
+
+    const call = await twilioClient.calls.create({
+        url: `${publicUrl}/twilio/voice`,
+        statusCallback: `${publicUrl}/twilio/call-status`,
+        statusCallbackEvent: ['completed', 'no-answer', 'busy', 'failed'],
+        to: phone,
+        from: process.env.TWILIO_PHONE_NUMBER
+    });
+
+    activeCalls.set(call.sid, {
+        goal: `Book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${time}.${fallbackText} CRITICAL: Never speak the year out loud. If the time is unavailable, ask what times they DO have available.`,
+        language: language || 'ja-JP',
+        userName: userName || 'Guest',
+        userPhone: userPhone || 'Not provided',
+        userId, scheduledCallId: scheduledCallId || null,
+        rawDate: date, rawTime: time, rawPeople: people,
+        restaurantPhone: phone, altTime1, altTime2,
+        attemptCount, history: []
+    });
+
+    console.log(`📞 Call attempt ${attemptCount} placed: ${call.sid} → ${phone}`);
+    return call;
+}
+
+// POST /api/schedule-call
+app.post('/api/schedule-call', async (req, res) => {
+    let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone, scheduledAt } = req.body;
+    if (!scheduledAt) return res.status(400).json({ error: 'scheduledAt is required.' });
+
+    let userId = null;
+    try {
+        const authHeader = req.headers['authorization'];
+        if (authHeader && authHeader.startsWith('Bearer '))
+            userId = jwt.verify(authHeader.split(' ')[1], JWT_SECRET).id;
+    } catch (e) { }
+
+    const schedId = `sched_${Date.now()}`;
+    const { error } = await supabase.from('scheduled_calls').insert({
+        id: schedId, user_id: userId,
+        restaurant_phone: phone, user_name: userName, user_phone: userPhone,
+        date, time, alt_time1: altTime1, alt_time2: altTime2,
+        people: String(people), language: language || 'ja-JP',
+        scheduled_at: new Date(scheduledAt).toISOString(),
+        attempt_count: 0, status: 'pending'
+    });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, schedId, message: `Call scheduled for ${new Date(scheduledAt).toLocaleString()}` });
+});
+
+// GET /api/scheduled-calls
+app.get('/api/scheduled-calls', authMiddleware, async (req, res) => {
+    const { data, error } = await supabase
+        .from('scheduled_calls').select('*')
+        .eq('user_id', req.user.id)
+        .order('scheduled_at', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+});
+
+// Background scheduler — fires every 30s, triggers pending calls
+setInterval(async () => {
+    if (!twilioClient) return;
+    try {
+        const now = new Date().toISOString();
+        const { data: pending } = await supabase
+            .from('scheduled_calls').select('*')
+            .eq('status', 'pending').lte('scheduled_at', now);
+
+        for (const sc of (pending || [])) {
+            console.log(`⏰ Scheduler firing call for: ${sc.restaurant_phone}`);
+            await supabase.from('scheduled_calls').update({ status: 'calling', attempt_count: 1 }).eq('id', sc.id);
+            try {
+                await placeCall({
+                    phone: sc.restaurant_phone, userName: sc.user_name, userPhone: sc.user_phone,
+                    date: sc.date, time: sc.time, altTime1: sc.alt_time1, altTime2: sc.alt_time2,
+                    people: sc.people, language: sc.language, userId: sc.user_id, scheduledCallId: sc.id
+                }, 1);
+            } catch (e) {
+                console.error('Scheduler call error:', e.message);
+                await supabase.from('scheduled_calls').update({ status: 'error', notes: e.message }).eq('id', sc.id);
+            }
+        }
+    } catch (e) { console.error('Scheduler error:', e.message); }
+}, 30000);
+
 
 // ==========================================
 // 1. FRONTEND SIMULATION ROUTE
@@ -505,40 +619,157 @@ app.post('/twilio/gather-result', async (req, res) => {
 // Twilio calls this when the physical phone call disconnects
 app.post('/twilio/call-status', async (req, res) => {
     const callSid = req.body.CallSid;
+    const callStatus = req.body.CallStatus;
     const callState = activeCalls.get(callSid);
 
-    if (callState && req.body.CallStatus === 'completed') {
-        broadcastLog(callSid, 'system', 'Call Ended. Evaluating success...');
+    if (!callState) { res.sendStatus(200); return; }
 
-        try {
-            const prompt = `
-                Review the following phone conversation between an AI assistant acting on behalf of a user and a restaurant.
-                Did the restaurant explicitly confirm and accept the reservation? Keep in mind they might have said "no", "we are full", or just hung up.
-                Conversation:
-                ${callState.history.map(m => '[' + m.role + ']: ' + m.content).join('\n')}
-                
-                Reply with strictly a JSON object: {"success": true} if booked successfully, or {"success": false} if it failed.
-            `;
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-            const result = await model.generateContent(prompt);
-            const text = result.response.text().trim().toLowerCase();
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 3 * 60 * 1000; // 3 minutes
 
-            const isSuccess = text.includes('"success": true') || text.includes('"success":true');
-            broadcastLog(callSid, 'status', isSuccess ? 'success' : 'failed');
+    // ── NO-ANSWER / BUSY / FAILED → Auto-Retry ──────────────────────────
+    if (['no-answer', 'busy', 'failed'].includes(callStatus)) {
+        const attempt = callState.attemptCount || 1;
+        broadcastLog(callSid, 'system', `Call ${callStatus} (attempt ${attempt}/${MAX_ATTEMPTS})`);
 
-            // Save to CRM history if user was logged in
-            if (isSuccess && callState.userId) {
+        if (attempt < MAX_ATTEMPTS) {
+            const nextAttempt = attempt + 1;
+            await sendStatusSMS(callState.userPhone,
+                `Attempt ${attempt}/${MAX_ATTEMPTS}: Restaurant didn't answer. Retrying in 3 minutes...`);
+
+            setTimeout(async () => {
+                try {
+                    await placeCall({
+                        phone: callState.restaurantPhone,
+                        userName: callState.userName,
+                        userPhone: callState.userPhone,
+                        date: callState.rawDate,
+                        time: callState.rawTime,
+                        altTime1: callState.altTime1,
+                        altTime2: callState.altTime2,
+                        people: callState.rawPeople,
+                        language: callState.language,
+                        userId: callState.userId,
+                        scheduledCallId: callState.scheduledCallId
+                    }, nextAttempt);
+                    console.log(`🔄 Retry ${nextAttempt} scheduled for ${callState.restaurantPhone}`);
+                } catch (e) {
+                    console.error('Retry failed:', e.message);
+                }
+            }, RETRY_DELAY_MS);
+
+        } else {
+            // All 3 attempts exhausted
+            broadcastLog(callSid, 'status', 'failed');
+            await sendStatusSMS(callState.userPhone,
+                `We tried calling ${callState.restaurantPhone} 3 times but couldn't reach them. ` +
+                `Please try calling manually or let us know a new time to try.`);
+
+            if (callState.scheduledCallId) {
+                await supabase.from('scheduled_calls').update({
+                    status: 'no_answer_final',
+                    notes: 'Restaurant did not answer after 3 attempts.'
+                }).eq('id', callState.scheduledCallId);
+            }
+            if (callState.userId) {
                 saveReservation(callState.userId, {
                     restaurantPhone: callState.restaurantPhone,
                     date: callState.rawDate,
                     time: callState.rawTime,
                     people: callState.rawPeople,
                     guestName: callState.userName,
-                    status: 'confirmed'
+                    status: 'no_answer',
+                    attemptCount: MAX_ATTEMPTS,
+                    notes: 'Restaurant did not answer after 3 attempts.',
+                    callSid
                 });
             }
+        }
+
+        activeCalls.delete(callSid);
+        res.sendStatus(200);
+        return;
+    }
+
+    // ── COMPLETED → Evaluate with Gemini ────────────────────────────────
+    if (callStatus === 'completed') {
+        broadcastLog(callSid, 'system', 'Call ended. Evaluating outcome...');
+
+        try {
+            const conversation = callState.history.map(m => `[${m.role}]: ${m.content}`).join('\n');
+
+            // Gemini evaluates outcome AND extracts alternatives
+            const evalPrompt = `
+                You are evaluating a phone call where an AI assistant tried to book a restaurant reservation.
+                
+                CONVERSATION:
+                ${conversation}
+                
+                Answer with ONLY a JSON object (no markdown, no explanation):
+                {
+                  "success": true or false,
+                  "alternatives": "string describing any alternative times/dates the restaurant mentioned, or null if none",
+                  "notes": "one sentence summary of what happened"
+                }
+                
+                Set "success": true ONLY if the restaurant explicitly confirmed the booking.
+            `;
+
+            const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+            const result = await model.generateContent(evalPrompt);
+            let rawText = result.response.text().trim();
+
+            // Strip markdown code fences if Gemini adds them
+            rawText = rawText.replace(/```json|```/g, '').trim();
+
+            let evalResult = { success: false, alternatives: null, notes: '' };
+            try { evalResult = JSON.parse(rawText); } catch (e) {
+                evalResult.success = rawText.includes('"success":true') || rawText.includes('"success": true');
+            }
+
+            const isSuccess = evalResult.success === true;
+            broadcastLog(callSid, 'status', isSuccess ? 'success' : 'failed');
+            if (evalResult.alternatives) broadcastLog(callSid, 'agent', `💡 Alternatives: ${evalResult.alternatives}`);
+
+            // Save to CRM
+            if (callState.userId) {
+                saveReservation(callState.userId, {
+                    restaurantPhone: callState.restaurantPhone,
+                    date: callState.rawDate,
+                    time: callState.rawTime,
+                    people: callState.rawPeople,
+                    guestName: callState.userName,
+                    status: isSuccess ? 'confirmed' : 'failed',
+                    attemptCount: callState.attemptCount || 1,
+                    alternatives: evalResult.alternatives || null,
+                    notes: evalResult.notes || null,
+                    callSid
+                });
+            }
+
+            // Update scheduled_calls status if applicable
+            if (callState.scheduledCallId) {
+                await supabase.from('scheduled_calls').update({
+                    status: isSuccess ? 'completed' : 'failed',
+                    alternatives: evalResult.alternatives,
+                    notes: evalResult.notes
+                }).eq('id', callState.scheduledCallId);
+            }
+
+            // SMS the user with the outcome
+            if (isSuccess) {
+                await sendStatusSMS(callState.userPhone,
+                    `✅ Reservation confirmed! Table for ${callState.rawPeople} on ${callState.rawDate} at ${callState.rawTime} under "${callState.userName}".`);
+            } else if (evalResult.alternatives) {
+                await sendStatusSMS(callState.userPhone,
+                    `❌ Your requested time wasn't available. The restaurant offered: ${evalResult.alternatives}. Reply to rebook!`);
+            } else {
+                await sendStatusSMS(callState.userPhone,
+                    `❌ Booking attempt was unsuccessful. ${evalResult.notes || 'Please try a different time.'}`);
+            }
+
         } catch (e) {
-            console.error(e);
+            console.error('Gemini evaluation error:', e);
             broadcastLog(callSid, 'status', 'failed');
         }
 
@@ -547,6 +778,7 @@ app.post('/twilio/call-status', async (req, res) => {
 
     res.sendStatus(200);
 });
+
 
 // ==========================================
 // 3. SMS CONFIRMATION

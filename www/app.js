@@ -269,6 +269,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const today = new Date().toISOString().split('T')[0];
     dateInput.value = today;
 
+    // ---- Schedule Call Mode ----
+    let callMode = 'now'; // 'now' | 'schedule'
+    const modeNowBtn = document.getElementById('modeNow');
+    const modeSchedBtn = document.getElementById('modeSched');
+    const schedPickerWrap = document.getElementById('schedulePickerWrap');
+    const callBtnText = document.getElementById('callBtnText');
+
+    // Set min datetime to now
+    const scheduledAtInput = document.getElementById('scheduledAt');
+    if (scheduledAtInput) {
+        const pad = n => String(n).padStart(2, '0');
+        const now = new Date();
+        scheduledAtInput.min = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+
+    function setCallMode(mode) {
+        callMode = mode;
+        modeNowBtn.classList.toggle('active', mode === 'now');
+        modeSchedBtn.classList.toggle('active', mode === 'schedule');
+        schedPickerWrap.classList.toggle('hidden', mode === 'now');
+        if (callBtnText) callBtnText.textContent = mode === 'now' ? translateStr('btn-call') : translateStr('btn-schedule') || '📅 Schedule Call';
+    }
+
+    modeNowBtn?.addEventListener('click', () => setCallMode('now'));
+    modeSchedBtn?.addEventListener('click', () => setCallMode('schedule'));
+
+
     // ---- Form Submission & AI Agent Simulation ----
     const form = document.getElementById('reservationForm');
     const callBtn = document.getElementById('callBtn');
@@ -319,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         callLogContainer.scrollTop = callLogContainer.scrollHeight;
     }
 
-    function startCallSimulation() {
+    async function startCallSimulation() {
         // UI Changes Let's go!
         btnText.classList.add('hidden');
         btnLoader.classList.remove('hidden');
@@ -341,14 +368,50 @@ document.addEventListener('DOMContentLoaded', () => {
         callLogContainer.innerHTML = '';
         addLog(translateStr('init-agent'), 'system');
 
+        const agentLang = document.getElementById('agentLang')?.value || 'ja-JP';
+        const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, language: agentLang };
+        const authHeaders = { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) };
+
+        // ── SCHEDULE MODE ──────────────────────────────────────────────
+        if (callMode === 'schedule') {
+            const scheduledAt = document.getElementById('scheduledAt')?.value;
+            if (!scheduledAt) {
+                alert('Please pick a date and time to schedule the call.');
+                btnLoader.classList.add('hidden');
+                btnText.classList.remove('hidden');
+                callBtn.disabled = false;
+                return;
+            }
+            try {
+                const res = await fetch(`${API}/api/schedule-call`, {
+                    method: 'POST', headers: authHeaders,
+                    body: JSON.stringify({ ...callPayload, scheduledAt })
+                });
+                const data = await res.json();
+                agentContainer.classList.remove('calling');
+                if (data.success) {
+                    addLog(`✅ Call scheduled! ${data.message}`, 'system');
+                    addLog(`📅 The agent will call ${phone} at the scheduled time and retry up to 3 times if no answer.`, 'system');
+                    agentStatusText.textContent = '📅 Call Scheduled';
+                } else {
+                    addLog(`❌ Failed to schedule: ${data.error}`, 'system');
+                    agentStatusText.textContent = 'Schedule Failed';
+                }
+            } catch (err) {
+                addLog(`❌ Network error: ${err.message}`, 'system');
+            }
+            btnLoader.classList.add('hidden');
+            btnText.classList.remove('hidden');
+            callBtn.disabled = false;
+            return;
+        }
+
+        // ── CALL NOW MODE ──────────────────────────────────────────────
         // Connect to our real Twilio + Gemini Node.js server!
-        fetch('https://moshi-moshi-8dh6.onrender.com/api/real-call', {
+        fetch(`${API}/api/real-call`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
-            },
-            body: JSON.stringify({ phone, userName, userPhone, date, time, altTime1, altTime2, people, language: document.getElementById('agentLang')?.value || 'ja-JP' })
+            headers: authHeaders,
+            body: JSON.stringify(callPayload)
         }).then(res => res.json())
             .then(data => {
                 if (data.success) {

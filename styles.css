@@ -1095,3 +1095,85 @@ footer {
     justify-content: center;
     gap: 8px;
 }
+
+/* ---- Schedule Call UI ---- */
+.call-mode-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+}
+
+.call-mode-tab {
+    flex: 1;
+    padding: 0.65rem 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.call-mode-tab:hover {
+    border-color: rgba(244, 197, 66, 0.35);
+    color: var(--text-main);
+}
+
+.call-mode-tab.active {
+    background: rgba(244, 197, 66, 0.12);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    font-weight: 600;
+    box-shadow: 0 0 10px rgba(244, 197, 66, 0.15);
+}
+
+.schedule-picker {
+    margin-top: 0.8rem;
+    animation: fadeInUp 0.2s ease;
+}
+
+.schedule-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+}
+
+.schedule-label i {
+    color: var(--accent-gold);
+}
+
+.schedule-datetime {
+    width: 100%;
+    padding: 0.85rem 1.1rem;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: border-color 0.25s;
+    color-scheme: dark;
+}
+
+.schedule-datetime:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 0 3px rgba(244, 197, 66, 0.15);
+}
+
+.schedule-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    line-height: 1.4;
+    opacity: 0.75;
+}
