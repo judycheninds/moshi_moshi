@@ -18,8 +18,8 @@ app.use(express.json());
 // Must parse urlencoded forms for Twilio webhooks
 app.use(express.urlencoded({ extended: true }));
 
-// Serve the frontend web files directly from this server to bypass Vercel
-app.use(express.static(path.join(__dirname, '../')));
+// Serve the frontend from the www/ directory (synced with root on every deploy)
+app.use(express.static(path.join(__dirname, '../www')));
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
