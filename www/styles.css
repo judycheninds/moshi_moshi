@@ -76,6 +76,7 @@ h1 {
     margin-bottom: 1rem;
     background: linear-gradient(to right, #fff, #bbb);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -322,6 +323,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     width: 60px;
     padding: 1rem 0;
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .counter-input input::-webkit-outer-spin-button,
@@ -751,22 +753,114 @@ footer {
     font-size: 0.9rem;
 }
 
-.lang-btn {
+/* ---- Navbar Language Dropdown ---- */
+.lang-select-wrapper {
+    position: relative;
+    margin-left: 10px;
+}
+
+.lang-select-btn {
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: var(--text-main);
-    padding: 0.5rem 1rem;
+    padding: 0.45rem 0.9rem;
     border-radius: 50px;
     font-weight: 500;
     cursor: pointer;
     font-family: inherit;
+    font-size: 0.9rem;
     transition: all 0.3s;
-    margin-left: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.lang-btn:hover {
+.lang-select-btn:hover {
     border-color: var(--primary-red);
     color: var(--primary-red);
+}
+
+.lang-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: rgba(20, 22, 28, 0.98);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    list-style: none;
+    min-width: 160px;
+    z-index: 200;
+    padding: 6px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: fadeInUp 0.2s ease;
+}
+
+.lang-dropdown.open {
+    display: block;
+}
+
+.lang-dropdown li {
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.lang-dropdown li:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-main);
+}
+
+.lang-dropdown li.active {
+    background: rgba(234, 46, 73, 0.15);
+    color: var(--primary-red);
+    font-weight: 600;
+}
+
+/* ---- Agent Language Pill Selector ---- */
+.agent-lang-selector {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 0.3rem;
+}
+
+.agent-lang-option {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-muted);
+    padding: 0.55rem 1rem;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.agent-lang-option:hover {
+    border-color: rgba(244, 197, 66, 0.5);
+    color: var(--text-main);
+}
+
+.agent-lang-option.active {
+    background: rgba(244, 197, 66, 0.12);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    font-weight: 600;
+    box-shadow: 0 0 12px rgba(244, 197, 66, 0.2);
+}
+
+.lang-flag {
+    font-size: 1.1rem;
+    line-height: 1;
 }
 
 /* Responsiveness */
@@ -778,24 +872,14 @@ footer {
     .nav-links a,
     .nav-links .login-btn {
         display: none;
-        /* Hide main links on mobile to save space for language btn */
     }
-}
 
-.lang-btn {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: var(--text-main);
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.3s;
-    margin-left: 10px;
-}
+    .agent-lang-selector {
+        gap: 0.4rem;
+    }
 
-.lang-btn:hover {
-    border-color: var(--primary-red);
-    color: var(--primary-red);
+    .agent-lang-option {
+        padding: 0.45rem 0.8rem;
+        font-size: 0.82rem;
+    }
 }

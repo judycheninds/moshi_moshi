@@ -17,6 +17,11 @@ const translations = {
         "label-altTime1": "Alt. Time 1 (Optional)",
         "label-altTime2": "Alt. Time 2 (Optional)",
         "label-people": "Number of People",
+        "label-agentLang": "Agent Call Language",
+        "lang-ja": "Japanese",
+        "lang-en": "English",
+        "lang-zh-TW": "Mandarin (TW)",
+        "lang-zh-CN": "Mandarin (CN)",
         "deposit-title": "Deposit Method",
         "deposit-desc": "A credit card is required. Some premium Japanese restaurants mandate a deposit. You will only be charged if the restaurant requests it.",
         "label-cc-name": "Cardholder Name",
@@ -50,7 +55,6 @@ const translations = {
         "label-address": "Billing Address",
         "btn-next": "Next",
         "btn-prev": "Back",
-
         "dialing": "Dialing",
         "real-call-initiated": "Real Phone Call Initiated!",
         "twilio-call-sid": "Twilio Call SID:",
@@ -65,6 +69,77 @@ const translations = {
         "init-agent": "Initializing MoshiMoshi AI Agent...",
         "my-account": "My Account",
         "signing-in": "Signing in..."
+    },
+    "ja": {
+        "nav-how": "使い方",
+        "nav-reserve": "予約する",
+        "nav-login": "ログイン / 登録",
+        "nav-download": "アプリをDL",
+        "hero-title": "あなた専属のバイリンガル・コンシェルジュ",
+        "hero-sub": "AIが日本語でレストランに電話し、お席を確保します。言語の壁を心配する必要はもうありません。",
+        "hero-btn": "今すぐ電話する",
+        "form-title": "予約の詳細",
+        "form-desc": "レストランの情報を入力してください。電話はAIがお任せします。",
+        "label-userName": "お名前",
+        "label-userPhone": "電話番号（SMS確認用）",
+        "label-phone": "レストランの電話番号",
+        "label-date": "日付",
+        "label-time": "時間",
+        "label-altTime1": "代替時間 1（任意）",
+        "label-altTime2": "代替時間 2（任意）",
+        "label-people": "人数",
+        "label-agentLang": "エージェントの通話言語",
+        "lang-ja": "日本語",
+        "lang-en": "英語",
+        "lang-zh-TW": "中国語（繁体）",
+        "lang-zh-CN": "中国語（簡体）",
+        "deposit-title": "デポジット方法",
+        "deposit-desc": "クレジットカードが必要です。一部の高級レストランでは保証金が必要です。レストランが要求した場合のみ請求されます。",
+        "label-cc-name": "カード名義人",
+        "label-cc-number": "カード番号",
+        "label-cc-exp": "有効期限（MM/YY）",
+        "label-cc-cvc": "セキュリティコード",
+        "btn-call": "AI通話を開始",
+        "agent-status-title": "エージェント状態",
+        "agent-status-default": "指示を待っています",
+        "call-log-default": "エージェント起動完了。通話の準備ができました。",
+        "result-title-success": "予約確定！",
+        "result-desc-success": "お席が予約されました。",
+        "btn-reset": "別の予約をする",
+        "footer-desc": "言語の壁を越えて、本格的な食体験を。",
+        "footer-privacy": "プライバシーポリシー",
+        "footer-terms": "利用規約",
+        "footer-contact": "サポートに連絡",
+        "modal-title": "ログイン",
+        "modal-desc": "予約履歴と保存済み支払い方法にアクセスするにはサインインしてください。",
+        "label-email": "メールアドレス",
+        "label-password": "パスワード",
+        "btn-signin": "サインイン",
+        "modal-no-account": "アカウントをお持ちでないですか？",
+        "modal-signup": "登録する",
+        "modal-title-signup": "アカウント作成",
+        "modal-desc-signup": "登録して予約を管理しましょう。",
+        "modal-has-account": "すでにアカウントをお持ちですか？",
+        "signing-up": "アカウントを作成中...",
+        "personal-title": "個人情報",
+        "personal-desc": "予約を個別対応するための基本的な連絡先情報。",
+        "label-address": "請求先住所",
+        "btn-next": "次へ",
+        "btn-prev": "戻る",
+        "dialing": "発信中",
+        "real-call-initiated": "実際の電話を発信しました！",
+        "twilio-call-sid": "Twilio 通話SID:",
+        "call-live": "Twilio通話進行中！",
+        "pick-up": "電話を取って、AIエージェントに日本語で話しかけてください！",
+        "error-prefix": "エラー:",
+        "failed-backend": "バックエンドへの接続に失敗しました。",
+        "agent-standby": "スタンバイ中",
+        "success-msg": "{dateStr} {time} {people}名様のご予約が完了しました！",
+        "reservation-failed": "予約失敗",
+        "failed-msg": "{time} のご予約は満席です。別の時間や日程をお試しください。",
+        "init-agent": "MoshiMoshi AIエージェントを起動中...",
+        "my-account": "マイアカウント",
+        "signing-in": "サインイン中..."
     },
     "zh-TW": {
         "nav-how": "如何運作",
@@ -84,6 +159,11 @@ const translations = {
         "label-altTime1": "備選時間 1 (選填)",
         "label-altTime2": "備選時間 2 (選填)",
         "label-people": "人數",
+        "label-agentLang": "AI 撥話語言",
+        "lang-ja": "日語",
+        "lang-en": "英語",
+        "lang-zh-TW": "中文（繁體）",
+        "lang-zh-CN": "中文（簡體）",
         "deposit-title": "訂金付款方式",
         "deposit-desc": "需要信用卡資訊。部分高級日本餐廳規定收取訂金。只有當餐廳要求時我們才會扣款。",
         "label-cc-name": "持卡人姓名",
@@ -117,7 +197,6 @@ const translations = {
         "label-address": "帳單地址",
         "btn-next": "下一頁",
         "btn-prev": "上一頁",
-
         "dialing": "正在撥號",
         "real-call-initiated": "已發起真實電話！",
         "twilio-call-sid": "Twilio 通話 SID:",
@@ -135,41 +214,82 @@ const translations = {
     }
 };
 
+// --- Language Config ---
+const langConfig = {
+    "en": { flag: "🇺🇸", label: "EN" },
+    "ja": { flag: "🇯🇵", label: "JP" },
+    "zh-TW": { flag: "🇹🇼", label: "中(繁)" }
+};
+
 let currentLang = "en";
+// Auto-detect UI language from browser
 if (typeof navigator !== "undefined" && navigator.language) {
-    if (navigator.language.toLowerCase().startsWith("zh")) {
-        currentLang = "zh-TW";
-    }
+    const bl = navigator.language.toLowerCase();
+    if (bl.startsWith("ja")) currentLang = "ja";
+    else if (bl.startsWith("zh")) currentLang = "zh-TW";
 }
 
 function updateUI() {
-    // Basic text content elements
     document.querySelectorAll("[data-i18n]").forEach(el => {
         const key = el.getAttribute("data-i18n");
-        if (translations[currentLang][key]) {
+        if (translations[currentLang] && translations[currentLang][key]) {
             el.innerHTML = translations[currentLang][key];
         }
     });
 
-    // Toggle button text
-    const toggleBtn = document.getElementById("langToggleBtn");
-    if (toggleBtn) {
-        toggleBtn.textContent = currentLang === 'en' ? '中(繁)' : 'EN';
-    }
+    // Update the nav dropdown button display
+    const flagEl = document.getElementById("langSelectFlag");
+    const labelEl = document.getElementById("langSelectLabel");
+    if (flagEl && langConfig[currentLang]) flagEl.textContent = langConfig[currentLang].flag;
+    if (labelEl && langConfig[currentLang]) labelEl.textContent = langConfig[currentLang].label;
+
+    // Update active state on dropdown items
+    document.querySelectorAll("#langDropdown li").forEach(li => {
+        li.classList.toggle("active", li.dataset.lang === currentLang);
+    });
 }
 
 function translateStr(key) {
-    return translations[currentLang][key] || key;
+    return (translations[currentLang] && translations[currentLang][key]) ? translations[currentLang][key] : key;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    const langToggleBtn = document.getElementById("langToggleBtn");
-    if (langToggleBtn) {
-        langToggleBtn.addEventListener("click", () => {
-            currentLang = currentLang === "en" ? "zh-TW" : "en";
-            updateUI();
+    // ---- Navbar language dropdown ----
+    const langSelectBtn = document.getElementById("langSelectBtn");
+    const langDropdown = document.getElementById("langDropdown");
+    const langSelectWrapper = document.getElementById("langSelectWrapper");
+
+    if (langSelectBtn && langDropdown) {
+        langSelectBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            langDropdown.classList.toggle("open");
         });
+
+        langDropdown.querySelectorAll("li").forEach(li => {
+            li.addEventListener("click", () => {
+                currentLang = li.dataset.lang;
+                window.currentLang = currentLang;
+                langDropdown.classList.remove("open");
+                updateUI();
+            });
+        });
+
+        // Close dropdown on outside click
+        document.addEventListener("click", () => langDropdown.classList.remove("open"));
     }
+
+    // ---- Agent Language Pill Selector ----
+    const agentLangBtns = document.querySelectorAll(".agent-lang-option");
+    const agentLangInput = document.getElementById("agentLang");
+
+    agentLangBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            agentLangBtns.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            if (agentLangInput) agentLangInput.value = btn.dataset.langValue;
+        });
+    });
+
     updateUI();
 });
 

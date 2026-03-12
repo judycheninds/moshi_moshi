@@ -44,7 +44,18 @@
                         class="fa-solid fa-download"></i> <span data-i18n="nav-download">Download App</span></button>
                 <button class="btn-primary login-btn" id="loginBtn"><span data-i18n="nav-login">Login / Sign Up</span>
                     <i class="fa-solid fa-arrow-right-to-bracket"></i></button>
-                <button id="langToggleBtn" class="lang-btn">中(繁)</button>
+                <div class="lang-select-wrapper" id="langSelectWrapper">
+                    <button class="lang-select-btn" id="langSelectBtn">
+                        <span id="langSelectFlag">🇺🇸</span>
+                        <span id="langSelectLabel">EN</span>
+                        <i class="fa-solid fa-chevron-down" style="font-size:0.7rem;"></i>
+                    </button>
+                    <ul class="lang-dropdown" id="langDropdown">
+                        <li data-lang="en" class="active">🇺🇸 English</li>
+                        <li data-lang="ja">🇯🇵 日本語</li>
+                        <li data-lang="zh-TW">🇹🇼 中文(繁)</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
@@ -109,9 +120,23 @@
                                 <div class="form-group half">
                                     <label for="time"><i class="fa-regular fa-clock"></i> <span
                                             data-i18n="label-time">Time</span></label>
-                                    <input type="time" id="time" required>
+                                    <input type="time" id="time" step="900" required>
                                 </div>
                             </div>
+
+                            <div class="row">
+                                <div class="form-group half">
+                                    <label for="altTime1"><i class="fa-solid fa-clock-rotate-left"></i> <span
+                                            data-i18n="label-altTime1">Alt. Time 1 (Optional)</span></label>
+                                    <input type="time" id="altTime1" step="900">
+                                </div>
+                                <div class="form-group half">
+                                    <label for="altTime2"><i class="fa-solid fa-clock-rotate-left"></i> <span
+                                            data-i18n="label-altTime2">Alt. Time 2 (Optional)</span></label>
+                                    <input type="time" id="altTime2" step="900">
+                                </div>
+                            </div>
+
 
                             <div class="form-group">
                                 <label for="people"><i class="fa-solid fa-users"></i> <span
@@ -123,6 +148,29 @@
                                     <button type="button" id="plusBtn" class="counter-btn"><i
                                             class="fa-solid fa-plus"></i></button>
                                 </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="agentLang"><i class="fa-solid fa-language"></i> <span data-i18n="label-agentLang">Agent Call Language</span></label>
+                                <div class="agent-lang-selector" id="agentLangSelector">
+                                    <button type="button" class="agent-lang-option active" data-lang-value="ja-JP" id="agentLangJa">
+                                        <span class="lang-flag">🇯🇵</span>
+                                        <span class="lang-name" data-i18n="lang-ja">Japanese</span>
+                                    </button>
+                                    <button type="button" class="agent-lang-option" data-lang-value="en-US" id="agentLangEn">
+                                        <span class="lang-flag">🇺🇸</span>
+                                        <span class="lang-name" data-i18n="lang-en">English</span>
+                                    </button>
+                                    <button type="button" class="agent-lang-option" data-lang-value="zh-TW" id="agentLangZhTW">
+                                        <span class="lang-flag">🇹🇼</span>
+                                        <span class="lang-name" data-i18n="lang-zh-TW">Mandarin (TW)</span>
+                                    </button>
+                                    <button type="button" class="agent-lang-option" data-lang-value="zh-CN" id="agentLangZhCN">
+                                        <span class="lang-flag">🇨🇳</span>
+                                        <span class="lang-name" data-i18n="lang-zh-CN">Mandarin (CN)</span>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="agentLang" value="ja-JP">
                             </div>
 
 

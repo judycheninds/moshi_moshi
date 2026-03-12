@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('https://moshi-moshi-8dh6.onrender.com/api/real-call', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, userName, userPhone, date, time, altTime1, altTime2, people, language: navigator.language || 'en-US' })
+            body: JSON.stringify({ phone, userName, userPhone, date, time, altTime1, altTime2, people, language: document.getElementById('agentLang')?.value || 'ja-JP' })
         }).then(res => res.json())
             .then(data => {
                 if (data.success) {

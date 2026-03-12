@@ -212,25 +212,32 @@ app.post('/twilio/voice', (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW'; // Specific STT for Taiwan
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Google Wavenet (best available for TW Mandarin)
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-CN-Neural2-D'; // Google Neural2 Mandarin CN female
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Polly.Kazuha-Neural';
+        twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese female
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Salli-Neural';
+        twilioVoice = 'Google.en-US-Neural2-F'; // Google Neural2 English female
     }
 
-    // The initial thing the AI says to start the conversation
-    let greeting = "Hello, I would like to make a reservation.";
-    if (targetLang.startsWith('ja')) greeting = "もしもし、予約をお願いしたいのですが。";
-    if (targetLang.startsWith('zh')) greeting = "你好，我想要預訂位子。";
+    // The initial thing the AI says to start the conversation — warm, human, personal
+    const name = callState ? callState.userName : 'my friend';
+    let greeting = `Hi there! I'm calling on behalf of ${name} to make a dinner reservation. Is this a good time?`;
+    if (targetLang.startsWith('ja')) {
+        greeting = `もしもし、${name}の代わりにご予約のお電話をさせていただいております。今、少しよろしいでしょうか？`;
+    }
+    if (targetLang.toLowerCase().includes('tw') || (targetLang.startsWith('zh') && targetLang.toLowerCase().includes('tw'))) {
+        greeting = `您好，我是代替 ${name} 打電話來預訂座位的。請問現在方便說話嗎？`;
+    } else if (targetLang.startsWith('zh')) {
+        greeting = `您好，我是代 ${name} 打电话预订座位的。请问现在方便吗？`;
+    }
 
     // Save to history
     if (callState) {
@@ -269,19 +276,19 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW';
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Google Wavenet (best available for TW Mandarin)
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Polly.Zhiyu-Neural';
+        twilioVoice = 'Google.cmn-CN-Neural2-D'; // Google Neural2 Mandarin CN female
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Polly.Kazuha-Neural';
+        twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese female
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Salli-Neural';
+        twilioVoice = 'Google.en-US-Neural2-F'; // Google Neural2 English female
     }
 
     if (transcribedText && callState) {
@@ -291,25 +298,29 @@ app.post('/twilio/gather-result', async (req, res) => {
 
         // Build the prompt for Gemini to decide what the AI should say next
         const prompt = `
-            You are a super helpful AI assistant acting on a telephone on behalf of your user. You are speaking to a restaurant staff member.
-            
-            [OBJECTIVE]
+            You are a warm, friendly personal assistant making a phone call on behalf of your user, ${callState.userName}.
+            You are NOT a robot or AI — you speak naturally, like a real human assistant would on the phone.
+
+            [YOUR TASK]
             ${callState.goal}
-            
-            [CONVERSATION HISTORY]
-            ${callState.history.map(m => '[' + m.role + ']: ' + m.content).join('\n')}
-            
-            [CURRENT SITUATION]
-            The restaurant just said: "${transcribedText}"
-            
-            [INSTRUCTIONS]
-            1. Directly answer their question or statement using the information in your [OBJECTIVE] (which contains the required date, time, name and number of people). Be explicit and helpful.
-            2. Be conversational and natural, like a real person calling. Do not use robotic phrasing. 
-            3. If they ask for your name (who the reservation is for), state loudly and clearly that the reservation is for "${callState.userName}".
-            4. If they ask for a phone number, tell them they can reach you at: "${callState.userPhone}".
-            5. Respond with ONLY the exact, raw text you want to say back on the phone to continue the booking.
-            6. CRITICAL: Speak exclusively in the language corresponding to the BCP-47 code: '${targetLang}'.
-            7. DO NOT output translations. DO NOT use quotes, emojis, markdown, or punctuation not native to the language. ONLY OUTPUT RAW TEXT so the Text-To-Speech engine reads it cleanly!
+
+            [CONVERSATION SO FAR]
+            ${callState.history.map(m => '[' + (m.role === 'user' ? 'You' : 'Restaurant') + ']: ' + m.content).join('\n')}
+
+            [THE RESTAURANT JUST SAID]
+            "${transcribedText}"
+
+            [HOW TO RESPOND — READ CAREFULLY]
+            1. Respond warmly and naturally, exactly as a real human assistant would on the phone. You are calling on behalf of ${callState.userName}.
+            2. Use natural conversational phrases. It's totally fine to say things like "Of course!", "Sure thing!", "Oh wonderful!", "Let me check...", "That sounds perfect!", "Great, thank you so much!" — but only when it fits naturally.
+            3. When confirming the reservation details (date, time, party size, name), do it clearly but warmly. For example: "It would be for ${callState.userName}, party of X, on [date] at [time]."
+            4. If they ask for a contact name, say the reservation is under the name "${callState.userName}".
+            5. If they ask for a callback number, give them: "${callState.userPhone}".
+            6. If the requested time is unavailable, stay calm and politely ask what other times are available, or suggest the fallback times from the objective.
+            7. Once the reservation is fully confirmed, warmly thank them and say a natural goodbye.
+            8. CRITICAL: Output ONLY the raw spoken text — no quotes, no stage directions, no emojis, no markdown. Just the words to speak.
+            9. CRITICAL: Speak exclusively in the language for BCP-47 code: '${targetLang}'. Do NOT mix languages or include translations.
+            10. Keep your response concise — this is a phone call, not an essay. Speak naturally and don't ramble.
         `;
 
         try {
