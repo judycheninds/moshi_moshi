@@ -170,10 +170,11 @@ async function sendStatusSMS(userPhone, message) {
 
 // Core function: place an outbound Twilio call
 async function placeCall(params, attemptCount = 1) {
-    const { phone, userName, userPhone, date, time, altTime1, altTime2, people, language, userId, scheduledCallId } = params;
-
+    const targetLang = language || 'ja-JP';
     let friendlyDate = date;
-    try { friendlyDate = new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }); } catch (e) { }
+    try {
+        friendlyDate = new Date(date).toLocaleDateString(targetLang, { month: 'long', day: 'numeric' });
+    } catch (e) { }
 
     let fallbackText = '';
     if (altTime1 || altTime2) {
@@ -181,7 +182,6 @@ async function placeCall(params, attemptCount = 1) {
     }
 
     const stateId = scheduledCallId || `call_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const targetLang = language || 'ja-JP';
 
     activeCalls.set(stateId, {
         goal: `Book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${time}.${fallbackText} CRITICAL: Never speak the year out loud. If the time is unavailable, ask what times they DO have available.`,
@@ -414,7 +414,7 @@ app.post('/api/real-call', async (req, res) => {
         let friendlyDate = date;
         try {
             const dateObj = new Date(date);
-            friendlyDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+            friendlyDate = dateObj.toLocaleDateString(language || 'ja-JP', { month: 'long', day: 'numeric' });
         } catch (e) { }
 
         // Store the goal state BEFORE creating the call to avoid race condition
@@ -558,6 +558,15 @@ app.post('/twilio/gather-result', async (req, res) => {
         twilioVoice = 'Google.en-US-Neural2-F'; // Google Neural2 English female
     }
 
+    const langNames = {
+        'ja-JP': 'Japanese',
+        'en-US': 'English',
+        'ko-KR': 'Korean',
+        'zh-TW': 'Mandarin Chinese (Taiwan, Traditional characters)',
+        'zh-CN': 'Mandarin Chinese (Mainland, Simplified characters)'
+    };
+    const langName = langNames[targetLang] || targetLang;
+
     if (transcribedText && callState) {
         console.log(`[Restaurant] ${transcribedText}`);
         callState.history.push({ role: 'model', content: transcribedText }); // The restaurant is playing the "prompt"
@@ -598,15 +607,6 @@ app.post('/twilio/gather-result', async (req, res) => {
             console.log(`[AI Agent] ${responseText}`);
             callState.history.push({ role: 'user', content: responseText });
             broadcastLog(callSid, 'agent', responseText);
-
-            const langNames = {
-                'ja-JP': 'Japanese',
-                'en-US': 'English',
-                'ko-KR': 'Korean',
-                'zh-TW': 'Mandarin Chinese (Taiwan, Traditional characters)',
-                'zh-CN': 'Mandarin Chinese (Mainland, Simplified characters)'
-            };
-            const langName = langNames[targetLang] || targetLang;
 
             twiml.say({ voice: twilioVoice, language: sayLang }, responseText);
 
