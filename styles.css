@@ -59,6 +59,12 @@ body {
     padding: 0 5%;
 }
 
+@media (max-width: 600px) {
+    .container {
+        padding: 0 1.25rem;
+    }
+}
+
 .glass-panel {
     background: var(--bg-panel);
     backdrop-filter: blur(var(--glass-blur));
@@ -221,10 +227,22 @@ h3 {
     padding-top: 80px;
 }
 
-.hero-text {
-    padding: 3rem;
-    max-width: 650px;
-    animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@media (max-width: 600px) {
+    .hero-text {
+        padding: 2rem 1.5rem;
+        text-align: center;
+    }
+
+    .hero-text div {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .cta-btn,
+    .hero .download-btn {
+        width: 100%;
+        text-align: center;
+    }
 }
 
 /* How it Works Section */
@@ -233,11 +251,24 @@ h3 {
     background: radial-gradient(circle at center, rgba(244, 197, 66, 0.05) 0%, transparent 70%);
 }
 
+@media (max-width: 600px) {
+    .how-it-works {
+        padding: 4rem 0;
+    }
+}
+
 .section-title {
     text-align: center;
     font-size: 2.5rem;
     margin-bottom: 3.5rem;
     color: var(--text-main);
+}
+
+@media (max-width: 600px) {
+    .section-title {
+        font-size: 1.8rem;
+        margin-bottom: 2.5rem;
+    }
 }
 
 .steps-grid {
@@ -316,6 +347,18 @@ h3 {
     padding: 2.5rem;
 }
 
+@media (max-width: 600px) {
+
+    .form-panel,
+    .status-panel {
+        padding: 1.5rem;
+    }
+
+    .reservation-section {
+        padding: 3rem 0;
+    }
+}
+
 .form-desc {
     color: var(--text-muted);
     margin-bottom: 2rem;
@@ -342,6 +385,13 @@ h3 {
 .row {
     display: flex;
     gap: 1rem;
+}
+
+@media (max-width: 600px) {
+    .row {
+        flex-direction: column;
+        gap: 0;
+    }
 }
 
 .half {
@@ -741,6 +791,14 @@ footer {
     align-items: center;
 }
 
+@media (max-width: 600px) {
+    .footer-content {
+        flex-direction: column;
+        gap: 2rem;
+        text-align: center;
+    }
+}
+
 .footer-brand p {
     color: var(--text-muted);
     font-size: 0.9rem;
@@ -786,12 +844,19 @@ footer {
 }
 
 .modal {
-    width: 100%;
+    width: 90% !important;
+    /* Ensure it doesn't hit screen edges */
     max-width: 450px;
     padding: 2.5rem;
     position: relative;
     transform: translateY(0);
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@media (max-width: 600px) {
+    .modal {
+        padding: 2rem 1.5rem;
+    }
 }
 
 .modal-overlay.hidden .modal {
@@ -946,9 +1011,13 @@ footer {
         grid-template-columns: 1fr;
     }
 
-    .nav-links a,
-    .nav-links .login-btn {
+    .nav-links a:not(.login-btn),
+    .nav-links .download-btn:not(.cta-wrapper .download-btn) {
         display: none;
+    }
+
+    .nav-links {
+        gap: 1rem;
     }
 
     .agent-lang-selector {
@@ -958,6 +1027,34 @@ footer {
     .agent-lang-option {
         padding: 0.45rem 0.8rem;
         font-size: 0.82rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .logo {
+        font-size: 1.4rem;
+    }
+
+    .jp-logo {
+        display: none;
+    }
+
+    .nav-links .login-btn span {
+        display: none;
+    }
+
+    .nav-links .login-btn {
+        padding: 0.6rem;
+        aspect-ratio: 1/1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .nav-links .login-btn i {
+        margin: 0;
+        font-size: 1.2rem;
     }
 }
 
