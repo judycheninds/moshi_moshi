@@ -68,7 +68,16 @@ const translations = {
         "failed-msg": "The restaurant is fully booked for {time}. Try selecting a different time or date.",
         "init-agent": "Initializing MoshiMoshi AI Agent...",
         "my-account": "My Account",
-        "signing-in": "Signing in..."
+        "signing-in": "Signing in...",
+        "how-title": "How it Works",
+        "step-1-title": "1. Enter Details",
+        "step-1-desc": "Provide the restaurant's phone number, date, time, and number of guests.",
+        "step-2-title": "2. AI Calls Instantly",
+        "step-2-desc": "Our bilingual AI agent dials the restaurant in Japan immediately or at your scheduled time.",
+        "step-3-title": "3. Human-like Negotiation",
+        "step-3-desc": "The agent speaks fluent Japanese, handles alternative times, and secures your table.",
+        "step-4-title": "4. Get SMS Confirmation",
+        "step-4-desc": "Receive a text message with your booking details once the reservation is confirmed."
     },
     "ja": {
         "nav-how": "使い方",
@@ -139,7 +148,16 @@ const translations = {
         "failed-msg": "{time} のご予約は満席です。別の時間や日程をお試しください。",
         "init-agent": "MoshiMoshi AIエージェントを起動中...",
         "my-account": "マイアカウント",
-        "signing-in": "サインイン中..."
+        "signing-in": "サインイン中...",
+        "how-title": "使い方",
+        "step-1-title": "1. 情報を入力",
+        "step-1-desc": "レストランの電話番号、日時、人数を入力します。",
+        "step-2-title": "2. AIが即座に電話",
+        "step-2-desc": "バイリンガルAIエージェントが、即座に、または予約した時間に日本のレストランへ電話します。",
+        "step-3-title": "3. 自然な交渉",
+        "step-3-desc": "エージェントが流暢な日本語で話し、空席情報の確認や予約の確保を行います。",
+        "step-4-title": "4. SMSで確認",
+        "step-4-desc": "予約が確定すると、詳細が記載された確認メッセージが届きます。"
     },
     "zh-TW": {
         "nav-how": "如何運作",
@@ -210,7 +228,16 @@ const translations = {
         "failed-msg": "餐廳在 {time} 已客滿，請嘗試選擇其他日期或時間。",
         "init-agent": "正在初始化 MoshiMoshi AI 助理...",
         "my-account": "我的帳戶",
-        "signing-in": "登入中..."
+        "signing-in": "登入中...",
+        "how-title": "運作原理",
+        "step-1-title": "1. 輸入預約詳情",
+        "step-1-desc": "提供餐廳電話、日期、時間及用餐人數。",
+        "step-2-title": "2. AI 立即撥號",
+        "step-2-desc": "我們的雙語 AI 助理會立即或在您預約的時間撥打電話至日本餐廳。",
+        "step-3-title": "3. 流利日語對話",
+        "step-3-desc": "助理會以流利的日語與餐廳溝通、協調時間並確保訂位成功。",
+        "step-4-title": "4. 收到簡訊確認",
+        "step-4-desc": "一旦訂位完成，您將會收到包含預約資訊的手機簡訊。"
     }
 };
 
