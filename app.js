@@ -23,23 +23,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const downloadAppBtns = document.querySelectorAll('.download-btn');
+    const installModal = document.getElementById('installModal');
+    const closeInstallModal = document.getElementById('closeInstallModal');
+    const closeInstallBtn = document.getElementById('closeInstallBtn');
+    const iosInstructions = document.getElementById('iosInstructions');
+    const androidInstructions = document.getElementById('androidInstructions');
+
+    const showInstallModal = () => {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        iosInstructions.classList.toggle('hidden', !isIOS);
+        androidInstructions.classList.toggle('hidden', isIOS);
+        installModal.classList.remove('hidden');
+    };
+
     downloadAppBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
             console.log('Download button clicked');
-            // Check if device is iOS to show custom instructions
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-            if (isIOS) {
-                alert("To install Moshi Moshi on iOS:\n1. Tap the 'Share' icon at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
-            } else if (deferredPrompt) {
+            if (deferredPrompt) {
                 console.log('Triggering PWA install prompt...');
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 console.log(`Install prompt outcome: ${outcome}`);
                 deferredPrompt = null;
             } else {
-                console.log('No deferredPrompt found, showing manual instructions.');
-                alert("To install this app:\n1. Open your browser menu (look for 3 dots or the share icon).\n2. Tap 'Add to Home Screen' or 'Install App'.");
+                showInstallModal();
+            }
+        });
+    });
+
+    [closeInstallModal, closeInstallBtn, installModal].forEach(el => {
+        if (!el) return;
+        el.addEventListener('click', (e) => {
+            if (e.target === el || el === closeInstallModal || el === closeInstallBtn) {
+                installModal.classList.add('hidden');
             }
         });
     });

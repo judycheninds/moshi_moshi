@@ -407,6 +407,54 @@
             </button>
         </div>
     </div>
+
+    <!-- PWA Install Modal -->
+    <div class="modal-overlay hidden" id="installModal">
+        <div class="modal glass-panel" style="max-width: 400px; text-align: center;">
+            <button class="close-btn" id="closeInstallModal"><i class="fa-solid fa-xmark"></i></button>
+            <div style="font-size: 3rem; color: var(--primary-red); margin-bottom: 1rem;">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+            </div>
+            <h2 style="margin-bottom: 0.5rem;">Install Moshi Moshi</h2>
+            <p class="text-muted" style="margin-bottom: 2rem; font-size: 0.95rem;">Add Moshi Moshi to your home screen
+                for the best experience.</p>
+
+            <div id="iosInstructions" class="hidden">
+                <div class="install-step">
+                    <div class="step-num">1</div>
+                    <div class="step-text">Tap the <i class="fa-solid fa-share-from-square"></i> <b>Share</b> button in
+                        Safari.</div>
+                </div>
+                <div class="install-step">
+                    <div class="step-num">2</div>
+                    <div class="step-text">Scroll down and select <b>Add to Home Screen</b>.</div>
+                </div>
+                <div class="install-step">
+                    <div class="step-num">3</div>
+                    <div class="step-text">Tap <b>Add</b> at the top right to finish!</div>
+                </div>
+            </div>
+
+            <div id="androidInstructions" class="hidden">
+                <div class="install-step">
+                    <div class="step-num">1</div>
+                    <div class="step-text">Tap the <i class="fa-solid fa-ellipsis-vertical"></i> <b>Menu</b> icon in
+                        your
+                        browser.</div>
+                </div>
+                <div class="install-step">
+                    <div class="step-num">2</div>
+                    <div class="step-text">Look for <b>Install App</b> or <b>Add to Home Screen</b>.</div>
+                </div>
+                <div class="install-step">
+                    <div class="step-num">3</div>
+                    <div class="step-text">Confirm the installation prompt!</div>
+                </div>
+            </div>
+
+            <button class="btn-primary full-width" id="closeInstallBtn" style="margin-top: 1rem;">Got it!</button>
+        </div>
+    </div>
     <script src="i18n.js"></script>
     <script src="app.js"></script>
     <script>
