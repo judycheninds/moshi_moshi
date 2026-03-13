@@ -242,12 +242,12 @@ h3 {
 
 .steps-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
 }
 
 .step-card {
-    padding: 2.5rem 2rem;
+    padding: 1.5rem 1rem;
     text-align: center;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     height: 100%;
@@ -257,18 +257,18 @@ h3 {
 }
 
 .step-card:hover {
-    transform: translateY(-10px);
+    transform: translateY(-5px);
     border-color: var(--accent-gold);
     box-shadow: 0 10px 30px rgba(244, 197, 66, 0.1);
 }
 
 .step-icon {
-    font-size: 2.5rem;
+    font-size: 1.8rem;
     color: var(--accent-gold);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     background: rgba(244, 197, 66, 0.1);
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -276,15 +276,28 @@ h3 {
 }
 
 .step-card h3 {
-    font-size: 1.25rem;
-    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
     color: var(--text-main);
 }
 
 .step-card p {
     color: var(--text-muted);
-    font-size: 0.95rem;
-    line-height: 1.6;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+/* Media query for mobile steps */
+@media (max-width: 992px) {
+    .steps-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .steps-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Form Panel */
