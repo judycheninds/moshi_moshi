@@ -70,9 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('mm_token', token);
         localStorage.setItem('mm_user', JSON.stringify(user));
         loginBtn.innerHTML = `<span>${user.name}</span> <i class="fa-solid fa-user"></i>`;
-        // Pre-fill form
-        if (document.getElementById('userName')) document.getElementById('userName').value = user.name;
-        if (document.getElementById('userPhone')) document.getElementById('userPhone').value = user.phone || '';
     }
 
     function clearAuth() {
@@ -81,14 +78,34 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('mm_token');
         localStorage.removeItem('mm_user');
         loginBtn.innerHTML = `<span data-i18n="nav-login">Login / Sign Up</span> <i class="fa-solid fa-arrow-right-to-bracket"></i>`;
+        // Clear pre-filled fields
+        const nameEl = document.getElementById('userName');
+        const phoneEl = document.getElementById('userPhone');
+        if (nameEl) nameEl.value = '';
+        if (phoneEl) phoneEl.value = '';
     }
 
-    // Auto-restore session
+    // Fill reservation form with user info + gold flash animation
+    function fillUserForm(user) {
+        const fields = [
+            { id: 'userName', value: user.name || '' },
+            { id: 'userPhone', value: user.phone || '' },
+        ];
+        fields.forEach(({ id, value }) => {
+            const el = document.getElementById(id);
+            if (!el || !value) return;
+            el.value = value;
+            el.classList.add('autofill-flash');
+            el.addEventListener('animationend', () => el.classList.remove('autofill-flash'), { once: true });
+        });
+    }
+
+    // Auto-restore session on page load
     if (authToken && currentUser) {
         loginBtn.innerHTML = `<span>${currentUser.name}</span> <i class="fa-solid fa-user"></i>`;
-        if (document.getElementById('userName')) document.getElementById('userName').value = currentUser.name;
-        if (document.getElementById('userPhone')) document.getElementById('userPhone').value = currentUser.phone || '';
+        fillUserForm(currentUser);
     }
+
 
     // ---- Login Modal Logic ----
     const loginModal = document.getElementById('loginModal');
@@ -212,6 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
             loginForm.reset();
             modalSubmitBtn.disabled = false;
             modalSubmitBtn.innerHTML = originalText;
+            // Fill reservation form with user info after modal closes
+            setTimeout(() => fillUserForm(currentUser), 300);
         } catch (err) {
             showModalError('Network error. Please try again.');
             modalSubmitBtn.disabled = false;
