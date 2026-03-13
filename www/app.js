@@ -381,9 +381,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const altTime2 = document.getElementById('altTime2').value;
         const people = document.getElementById('people').value;
 
-        agentContainer.classList.add('calling');
-        agentStatusText.textContent = `${translateStr('dialing')} ${phone}...`;
-
         callLogContainer.innerHTML = '';
         addLog(translateStr('init-agent'), 'system');
 
@@ -391,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, language: agentLang };
         const authHeaders = { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) };
 
-        // ── SCHEDULE MODE ──────────────────────────────────────────────
         if (callMode === 'schedule') {
             const scheduledAt = document.getElementById('scheduledAt')?.value;
             if (!scheduledAt) {
@@ -401,13 +397,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 callBtn.disabled = false;
                 return;
             }
+
+            agentStatusText.textContent = '📅 Scheduling call...';
+
             try {
+                // Convert local time to UTC ISO string so server interprets it correctly
+                const scheduledAtUTC = new Date(scheduledAt).toISOString();
                 const res = await fetch(`${API}/api/schedule-call`, {
                     method: 'POST', headers: authHeaders,
-                    body: JSON.stringify({ ...callPayload, scheduledAt })
+                    body: JSON.stringify({ ...callPayload, scheduledAt: scheduledAtUTC })
                 });
                 const data = await res.json();
-                agentContainer.classList.remove('calling');
                 if (data.success) {
                     addLog(`✅ Call scheduled! ${data.message}`, 'system');
                     addLog(`📅 The agent will call ${phone} at the scheduled time and retry up to 3 times if no answer.`, 'system');
@@ -423,64 +423,67 @@ document.addEventListener('DOMContentLoaded', () => {
             btnText.classList.remove('hidden');
             callBtn.disabled = false;
             return;
-        }
+        } else {
+            // ── CALL NOW MODE ──────────────────────────────────────────────
+            agentContainer.classList.add('calling');
+            agentStatusText.textContent = `${translateStr('dialing')} ${phone}...`;
 
-        // ── CALL NOW MODE ──────────────────────────────────────────────
-        // Connect to our real Twilio + Gemini Node.js server!
-        fetch(`${API}/api/real-call`, {
-            method: 'POST',
-            headers: authHeaders,
-            body: JSON.stringify(callPayload)
-        }).then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    addLog(translateStr('real-call-initiated'), 'system');
-                    addLog(translateStr('twilio-call-sid') + ' ' + data.callSid, 'system');
-                    agentStatusText.textContent = translateStr('call-live');
+            // Connect to our real Twilio + Gemini Node.js server!
+            fetch(`${API}/api/real-call`, {
+                method: 'POST',
+                headers: authHeaders,
+                body: JSON.stringify(callPayload)
+            }).then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        addLog(translateStr('real-call-initiated'), 'system');
+                        addLog(translateStr('twilio-call-sid') + ' ' + data.callSid, 'system');
+                        agentStatusText.textContent = translateStr('call-live');
 
-                    // Listen to the live conversation via SSE
-                    const eventSource = new EventSource(`https://moshi-moshi-8dh6.onrender.com/api/call-stream/${data.callSid}`);
-                    let emergencyTimeout;
+                        // Listen to the live conversation via SSE
+                        const eventSource = new EventSource(`https://moshi-moshi-8dh6.onrender.com/api/call-stream/${data.callSid}`);
+                        let emergencyTimeout;
 
-                    eventSource.onmessage = (e) => {
-                        const msg = JSON.parse(e.data);
-                        if (msg.role === 'status') {
+                        eventSource.onmessage = (e) => {
+                            const msg = JSON.parse(e.data);
+                            if (msg.role === 'status') {
+                                eventSource.close();
+                                clearTimeout(emergencyTimeout);
+                                if (msg.content === 'success') {
+                                    finishCall(true, date, time, people, userPhone, userName);
+                                } else {
+                                    finishCall(false, date, time, people, userPhone, userName);
+                                }
+                            } else if (msg.role === 'agent') {
+                                addLog(msg.content, 'agent');
+                            } else if (msg.role === 'restaurant') {
+                                addLog(msg.content, 'restaurant'); // Styles the restaurant text correctly
+                            } else if (msg.role === 'system') {
+                                addLog(msg.content, 'system');
+                            }
+                        };
+
+                        eventSource.onerror = () => {
                             eventSource.close();
                             clearTimeout(emergencyTimeout);
-                            if (msg.content === 'success') {
-                                finishCall(true, date, time, people, userPhone, userName);
-                            } else {
-                                finishCall(false, date, time, people, userPhone, userName);
-                            }
-                        } else if (msg.role === 'agent') {
-                            addLog(msg.content, 'agent');
-                        } else if (msg.role === 'restaurant') {
-                            addLog(msg.content, 'restaurant'); // Styles the restaurant text correctly
-                        } else if (msg.role === 'system') {
-                            addLog(msg.content, 'system');
-                        }
-                    };
+                            finishCall(false, date, time, people, userPhone, userName);
+                        };
 
-                    eventSource.onerror = () => {
-                        eventSource.close();
-                        clearTimeout(emergencyTimeout);
+                        // Absolute fallback if the AI somehow gets stuck in an infinite loop
+                        emergencyTimeout = setTimeout(() => {
+                            eventSource.close();
+                            finishCall(true, date, time, people, userPhone, userName);
+                        }, 60000); // 60s maximum duration
+
+                    } else {
+                        addLog(`${translateStr('error-prefix')} ${data.error}`, 'error');
                         finishCall(false, date, time, people, userPhone, userName);
-                    };
-
-                    // Absolute fallback if the AI somehow gets stuck in an infinite loop
-                    emergencyTimeout = setTimeout(() => {
-                        eventSource.close();
-                        finishCall(true, date, time, people, userPhone, userName);
-                    }, 60000); // 60s maximum duration
-
-                } else {
-                    addLog(`${translateStr('error-prefix')} ${data.error}`, 'error');
+                    }
+                }).catch(err => {
+                    addLog(translateStr('failed-backend'), 'error');
                     finishCall(false, date, time, people, userPhone, userName);
-                }
-            }).catch(err => {
-                addLog(translateStr('failed-backend'), 'error');
-                finishCall(false, date, time, people, userPhone, userName);
-            });
+                });
+        }
     }
 
     function finishCall(success, date, time, people, userPhone, userName) {
