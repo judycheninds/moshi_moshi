@@ -477,6 +477,10 @@ app.post('/twilio/voice', (req, res) => {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
         twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese female
+    } else if (targetLang.startsWith('ko')) {
+        sayLang = 'ko-KR';
+        gatherLang = 'ko-KR';
+        twilioVoice = 'Google.ko-KR-Neural2-A'; // Google Neural2 Korean
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
@@ -491,6 +495,8 @@ app.post('/twilio/voice', (req, res) => {
     }
     if (targetLang.toLowerCase().includes('tw') || (targetLang.startsWith('zh') && targetLang.toLowerCase().includes('tw'))) {
         greeting = `您好，我是代替 ${name} 打電話來預訂座位的。請問現在方便說話嗎？`;
+    } else if (targetLang.startsWith('ko')) {
+        greeting = `안녕하세요, ${name}님을 대신하여 예약 전화를 드렸습니다. 지금 통화 가능하신가요?`;
     } else if (targetLang.startsWith('zh')) {
         greeting = `您好，我是代 ${name} 打电话预订座位的。请问现在方便吗？`;
     }
@@ -542,6 +548,10 @@ app.post('/twilio/gather-result', async (req, res) => {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
         twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese female
+    } else if (targetLang.startsWith('ko')) {
+        sayLang = 'ko-KR';
+        gatherLang = 'ko-KR';
+        twilioVoice = 'Google.ko-KR-Neural2-A';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
@@ -592,6 +602,7 @@ app.post('/twilio/gather-result', async (req, res) => {
             const langNames = {
                 'ja-JP': 'Japanese',
                 'en-US': 'English',
+                'ko-KR': 'Korean',
                 'zh-TW': 'Mandarin Chinese (Taiwan, Traditional characters)',
                 'zh-CN': 'Mandarin Chinese (Mainland, Simplified characters)'
             };
@@ -613,6 +624,7 @@ app.post('/twilio/gather-result', async (req, res) => {
             console.error("Gemini failed:", e);
             let errMsg = "I'm sorry, please say that again.";
             if (targetLang.startsWith('ja')) errMsg = "すみません、もう一度お願いします。";
+            if (targetLang.startsWith('ko')) errMsg = "죄송합니다, 다시 한번 말씀해 주시겠어요?";
             if (targetLang.startsWith('zh')) errMsg = "不好意思，可以請您再說一次嗎？";
             twiml.say({ voice: twilioVoice, language: sayLang }, errMsg);
 
@@ -633,6 +645,7 @@ app.post('/twilio/gather-result', async (req, res) => {
         // If the gather timed out or got nothing, just end the call gracefully
         let hangupMsg = "I will call back later. Goodbye.";
         if (targetLang.startsWith('ja')) hangupMsg = "また後でかけ直します。失礼します。";
+        if (targetLang.startsWith('ko')) hangupMsg = "나중에 다시 전화드리겠습니다. 감사합니다.";
         if (targetLang.startsWith('zh')) hangupMsg = "我晚點再打來。再見。";
         twiml.say({ voice: twilioVoice, language: sayLang }, hangupMsg);
         twiml.hangup();
