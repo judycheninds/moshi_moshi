@@ -1,6 +1,19 @@
+// ---- PWA Download Logic (Handle event outside DOMContentLoaded to ensure it's captured) ----
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent Chrome from automatically showing the prompt
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    console.log('✅ beforeinstallprompt event captured');
+});
+
 document.addEventListener('DOMContentLoaded', () => {
-    // ---- Navbar scroll effect ----
+    // ---- Navbar elements ----
     const navbar = document.getElementById('navbar');
+    const loginBtn = document.getElementById('loginBtn');
+
+    // ---- Navbar scroll effect ----
     window.addEventListener('scroll', () => {
         if (window.scrollY > 50) {
             navbar.classList.add('scrolled');
@@ -9,33 +22,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ---- PWA Download Logic ----
-    let deferredPrompt;
     const downloadAppBtns = document.querySelectorAll('.download-btn');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent Chrome 67 and earlier from automatically showing the prompt
-        e.preventDefault();
-        // Stash the event so it can be triggered later.
-        deferredPrompt = e;
-    });
-
     downloadAppBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
+            console.log('Download button clicked');
             // Check if device is iOS to show custom instructions
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
             if (isIOS) {
-                alert("To install the Moshi Moshi app on iOS:\n1. Tap the 'Share' icon at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
+                alert("To install Moshi Moshi on iOS:\n1. Tap the 'Share' icon at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
             } else if (deferredPrompt) {
+                console.log('Triggering PWA install prompt...');
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('User accepted the A2HS prompt');
-                }
+                console.log(`Install prompt outcome: ${outcome}`);
                 deferredPrompt = null;
             } else {
-                alert("To install this app, simply use your browser's 'Add to Home Screen' or 'Install App' feature from the menu!");
+                console.log('No deferredPrompt found, showing manual instructions.');
+                alert("To install this app:\n1. Open your browser menu (look for 3 dots or the share icon).\n2. Tap 'Add to Home Screen' or 'Install App'.");
             }
         });
     });
