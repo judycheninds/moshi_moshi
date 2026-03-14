@@ -634,7 +634,11 @@ app.post('/twilio/gather-result', async (req, res) => {
         `;
 
         try {
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            // System instruction has HIGHEST priority in Gemini — enforces language at model level
+            const model = genAI.getGenerativeModel({
+                model: "gemini-2.5-flash",
+                systemInstruction: `You are a human phone assistant. You MUST respond ONLY in ${langName} (BCP-47: ${targetLang}). This is a strict requirement. NEVER switch to English or any other language under any circumstances, not even for a single word, not even for the goodbye.`
+            });
             const aiResponse = await model.generateContent(prompt);
             let responseText = aiResponse.response.text().trim();
             let digitsToPress = null;
@@ -644,6 +648,24 @@ app.post('/twilio/gather-result', async (req, res) => {
             if (pressMatch) {
                 digitsToPress = pressMatch[1];
                 responseText = responseText.replace(pressMatch[0], '').trim();
+            }
+
+            // Post-process: detect if the model switched to English when it shouldn't have
+            const isNonEnglishTarget = !targetLang.startsWith('en');
+            if (isNonEnglishTarget && responseText.length > 5) {
+                const latinChars = (responseText.match(/[a-zA-Z]/g) || []).length;
+                const totalChars = responseText.replace(/\s/g, '').length;
+                const latinRatio = latinChars / totalChars;
+                if (latinRatio > 0.4) {
+                    // More than 40% Latin chars in a non-English call — auto-correct language
+                    console.log(`[Lang Fix] Detected language switch (${Math.round(latinRatio * 100)}% Latin). Auto-correcting to ${langName}...`);
+                    const fixModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+                    const fixResult = await fixModel.generateContent(
+                        `Translate the following text to ${langName}. Keep the same natural, warm tone. Output ONLY the translation, nothing else:\n\n${responseText}`
+                    );
+                    responseText = fixResult.response.text().trim();
+                    console.log(`[Lang Fix] Corrected response: ${responseText}`);
+                }
             }
 
             console.log(`[AI Agent] ${responseText} ${digitsToPress ? `(Pressing ${digitsToPress})` : ''}`);
