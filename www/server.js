@@ -824,16 +824,33 @@ app.post('/twilio/call-status', async (req, res) => {
             console.log('[Eval] Agent said goodbye without booking:', agentSaidGoodbyeWithoutBooking);
             console.log('[Eval] Restaurant said unavailable:', restaurantSaidFull);
 
-            // Extract proposed alternative times from ALL conversation text
-            const allConvText = callState.history.map(m => m.content).join(' ').toLowerCase();
-            const timePattern = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/g;
-            const allTimeMatches = [...new Set(allConvText.match(timePattern) || [])];
-            const rawOriginal = (callState.rawTime || '').toLowerCase().replace(/^0/, '').replace(':', '');
-            const proposedTimes = allTimeMatches.filter(t => {
-                const norm = t.replace(/\s/g, '').replace(':', '').replace(/^0/, '');
-                return norm !== rawOriginal && norm.length >= 2 && parseInt(norm) >= 6 && parseInt(norm) <= 23;
-            });
+            // Extract proposed alternative times from the RESTAURANT's messages
+            // Use a regex that captures HH:MM or H am/pm format
+            const timeRegex = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/gi;
+            const originalHour = parseInt((callState.rawTime || '00:00').split(':')[0]);
+            const originalMin = parseInt((callState.rawTime || '00:00').split(':')[1] || '0');
+
+            const foundTimes = new Map(); // deduplicate by normalized time
+            let match;
+            while ((match = timeRegex.exec(allRestaurantText)) !== null) {
+                let h = parseInt(match[1]);
+                const m = parseInt(match[2] || '0');
+                const meridian = (match[3] || '').toLowerCase();
+                if (meridian === 'pm' && h < 12) h += 12;
+                if (meridian === 'am' && h === 12) h = 0;
+                if (h < 1 || h > 23) continue; // skip nonsense numbers
+                const key = `${h}:${String(m).padStart(2, '0')}`;
+                // Don't include the original requested time
+                if (h === originalHour && m === originalMin) continue;
+                // Format nicely: "12:30 PM" style
+                const displayH = h > 12 ? h - 12 : h === 0 ? 12 : h;
+                const suffix = h >= 12 ? 'PM' : 'AM';
+                const displayTime = m === 0 ? `${displayH}:00 ${suffix}` : `${displayH}:${String(m).padStart(2, '0')} ${suffix}`;
+                foundTimes.set(key, displayTime);
+            }
+            const proposedTimes = [...foundTimes.values()];
             console.log('[Eval] Proposed alt times found:', proposedTimes);
+
 
             if (agentSaidGoodbyeWithoutBooking || restaurantSaidFull) {
                 const altStr = proposedTimes.length > 0 ? proposedTimes.join(' or ') : null;
