@@ -610,7 +610,17 @@ document.addEventListener('DOMContentLoaded', () => {
             resultStatusIcon.className = 'result-icon error';
             resultStatusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
             resultTitle.textContent = translateStr('reservation-failed');
-            resultDesc.textContent = translateStr('failed-msg').replace('{time}', time);
+
+            if (alternatives) {
+                // Show failure + the restaurant's proposed alternative
+                resultDesc.textContent = translateStr('alt-proposed-msg') || `The restaurant couldn't book ${time}, but proposed an alternative:`;
+                if (altOfferBox && altOfferText) {
+                    altOfferText.textContent = alternatives;
+                    altOfferBox.classList.remove('hidden');
+                }
+            } else {
+                resultDesc.textContent = translateStr('failed-msg').replace('{time}', time);
+            }
         }
 
         resultCard.classList.remove('hidden');
