@@ -796,34 +796,44 @@ app.post('/twilio/call-status', async (req, res) => {
             const restaurantMessages = callState.history.filter(m => m.role === 'model').map(m => m.content);
             const allRestaurantText = restaurantMessages.join(' ').toLowerCase();
 
-            // Phrases indicating the agent ended the call WITHOUT a confirmed booking
+            // Phrases the AGENT says when leaving WITHOUT a booking
+            // Keep broad — 'check with' catches 'check with Judy', 'check with my client', etc.
             const noBookingPhrases = [
-                'check with my client', 'check with the client', 'get back to you', 'call back',
-                'need to check', '需要確認', '確認後再', '再聯絡', '跟我的客戶確認', '向客戶確認',
-                '確認一下', '再打來', 'また確認', 'また連絡', 'クライアントに確認',
-                '고객에게 확인', '다시 연락'
+                'check with', 'get back to you', 'call back', 'will confirm', 'let you know',
+                'need to confirm', 'need to check', 'will check',
+                '需要確認', '確認後再', '再聯絡', '跟我的', '向客戶', '確認一下', '再打來', '回覆您',
+                'また確認', 'また連絡', '確認して', '折り返し',
+                '다시 연락', '확인하고', '확인 후'
             ];
 
-            // Phrases indicating the restaurant had NO availability at the original time
+            // Phrases the RESTAURANT says when they have NO availability
+            // Broad to catch variants like "we don't have a table"
             const noAvailabilityPhrases = [
-                'fully booked', 'no availability', 'no table', 'unavailable', 'cannot accommodate',
-                '満席', '予約が取れません', '空きがない', '空席なし',
-                '客滿', '沒有位子', '沒有空位', '無法預約',
-                '예약이 꽉 찼', '자리가 없', '만석'
+                "don't have", "do not have", 'no available', 'not available', 'fully booked',
+                'no availability', 'unavailable', 'cannot accommodate', 'all booked', 'sold out',
+                '満席', '予約が取れません', '空きがない', '空席なし', 'ご用意できません',
+                '客滿', '沒有位子', '沒有空位', '無法預約', '沒有', '沒空位',
+                '예약이 꽉 찼', '자리가 없', '만석', '없습니다'
             ];
 
             const agentSaidGoodbyeWithoutBooking = noBookingPhrases.some(p => lastAgentMsg.includes(p));
             const restaurantSaidFull = noAvailabilityPhrases.some(p => allRestaurantText.includes(p));
 
             console.log('[Eval] Last agent message:', lastAgentMsg);
+            console.log('[Eval] All restaurant text:', allRestaurantText);
             console.log('[Eval] Agent said goodbye without booking:', agentSaidGoodbyeWithoutBooking);
-            console.log('[Eval] Restaurant said full:', restaurantSaidFull);
+            console.log('[Eval] Restaurant said unavailable:', restaurantSaidFull);
 
-            // Extract any times mentioned by the restaurant (simple pattern)
-            const timePattern = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM|時|시)?)/g;
-            const restaurantTimeMatches = allRestaurantText.match(timePattern) || [];
-            const originalTime = (callState.rawTime || '').replace(/^0/, '');
-            const proposedTimes = restaurantTimeMatches.filter(t => !t.replace(/\s/g, '').includes(originalTime.replace(':', '').replace(/^0/, '')));
+            // Extract proposed alternative times from ALL conversation text
+            const allConvText = callState.history.map(m => m.content).join(' ').toLowerCase();
+            const timePattern = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/g;
+            const allTimeMatches = [...new Set(allConvText.match(timePattern) || [])];
+            const rawOriginal = (callState.rawTime || '').toLowerCase().replace(/^0/, '').replace(':', '');
+            const proposedTimes = allTimeMatches.filter(t => {
+                const norm = t.replace(/\s/g, '').replace(':', '').replace(/^0/, '');
+                return norm !== rawOriginal && norm.length >= 2 && parseInt(norm) >= 6 && parseInt(norm) <= 23;
+            });
+            console.log('[Eval] Proposed alt times found:', proposedTimes);
 
             if (agentSaidGoodbyeWithoutBooking || restaurantSaidFull) {
                 const altStr = proposedTimes.length > 0 ? proposedTimes.join(' or ') : null;
