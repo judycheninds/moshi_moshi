@@ -79,6 +79,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ---- Time select syncing ----
+    // Sync hour+minute selects → hidden input for all 3 time fields
+    function syncTimeSelects(hourId, minId, hiddenId) {
+        const hourEl = document.getElementById(hourId);
+        const minEl = document.getElementById(minId);
+        const hiddenEl = document.getElementById(hiddenId);
+        if (!hourEl || !minEl || !hiddenEl) return;
+        const update = () => {
+            if (hourEl.value && minEl.value !== '') {
+                hiddenEl.value = `${hourEl.value}:${minEl.value}`;
+            } else {
+                hiddenEl.value = '';
+            }
+        };
+        hourEl.addEventListener('change', update);
+        minEl.addEventListener('change', update);
+    }
+    syncTimeSelects('timeHour', 'timeMin', 'time');
+    syncTimeSelects('altTime1Hour', 'altTime1Min', 'altTime1');
+    syncTimeSelects('altTime2Hour', 'altTime2Min', 'altTime2');
+
+
     // ---- Auth State ----
     const API = 'https://moshi-moshi-8dh6.onrender.com';
     let authToken = localStorage.getItem('mm_token') || null;
@@ -374,11 +396,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('rebookBtn')?.addEventListener('click', () => {
         resultCard.classList.add('hidden');
-        // Try to extract and auto-fill the proposed alternative time
+        // Try to extract and auto-fill the proposed alternative time into the select dropdowns
         const altOfferText = document.getElementById('altOfferText');
-        const timeInput = document.getElementById('time');
-        if (altOfferText && timeInput) {
-            // Try to parse a time like "12:30", "12:30pm", "12" from the alt offer text
+        if (altOfferText) {
             const altText = altOfferText.textContent || '';
             const timeMatch = altText.match(/\b(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
             if (timeMatch) {
@@ -387,13 +407,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 const meridian = (timeMatch[3] || '').toLowerCase();
                 if (meridian === 'pm' && hours < 12) hours += 12;
                 if (meridian === 'am' && hours === 12) hours = 0;
+                // Snap minutes to nearest 15
+                const snappedMins = [0, 15, 30, 45].reduce((prev, curr) =>
+                    Math.abs(curr - mins) < Math.abs(prev - mins) ? curr : prev, 0);
                 const paddedH = String(hours).padStart(2, '0');
-                const paddedM = String(mins).padStart(2, '0');
-                timeInput.value = `${paddedH}:${paddedM}`;
-                timeInput.classList.add('autofill-flash');
-                setTimeout(() => timeInput.classList.remove('autofill-flash'), 2000);
+                const paddedM = String(snappedMins).padStart(2, '0');
+                // Set the select dropdowns
+                const hourSel = document.getElementById('timeHour');
+                const minSel = document.getElementById('timeMin');
+                const hiddenTime = document.getElementById('time');
+                if (hourSel) hourSel.value = paddedH;
+                if (minSel) minSel.value = paddedM;
+                if (hiddenTime) {
+                    hiddenTime.value = `${paddedH}:${paddedM}`;
+                    hiddenTime.classList.add('autofill-flash');
+                    setTimeout(() => hiddenTime.classList.remove('autofill-flash'), 2000);
+                }
+                // Flash the hour select too
+                if (hourSel) {
+                    hourSel.classList.add('autofill-flash');
+                    setTimeout(() => hourSel.classList.remove('autofill-flash'), 2000);
+                }
+                if (hourSel) hourSel.focus();
             }
-            timeInput.focus();
         }
 
         // Restore button state

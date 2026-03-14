@@ -150,7 +150,39 @@
                                 <div class="form-group half">
                                     <label for="time"><i class="fa-regular fa-clock"></i> <span
                                             data-i18n="label-time">Time</span></label>
-                                    <input type="time" id="time" step="900" required>
+                                    <div class="time-select-group" id="timeSelectGroup">
+                                        <select id="timeHour" required>
+                                            <option value="" disabled selected>HH</option>
+                                            <option>06</option>
+                                            <option>07</option>
+                                            <option>08</option>
+                                            <option>09</option>
+                                            <option>10</option>
+                                            <option>11</option>
+                                            <option>12</option>
+                                            <option>13</option>
+                                            <option>14</option>
+                                            <option>15</option>
+                                            <option>16</option>
+                                            <option>17</option>
+                                            <option>18</option>
+                                            <option>19</option>
+                                            <option>20</option>
+                                            <option>21</option>
+                                            <option>22</option>
+                                            <option>23</option>
+                                        </select>
+                                        <span class="time-colon">:</span>
+                                        <select id="timeMin" required>
+                                            <option value="" disabled selected>MM</option>
+                                            <option value="00">00</option>
+                                            <option value="15">15</option>
+                                            <option value="30">30</option>
+                                            <option value="45">45</option>
+                                        </select>
+                                        <!-- Hidden input keeps id="time" for downstream JS compatibility -->
+                                        <input type="hidden" id="time">
+                                    </div>
                                 </div>
                             </div>
 
@@ -158,12 +190,74 @@
                                 <div class="form-group half">
                                     <label for="altTime1"><i class="fa-solid fa-clock-rotate-left"></i> <span
                                             data-i18n="label-altTime1">Alt. Time 1 (Optional)</span></label>
-                                    <input type="time" id="altTime1" step="900">
+                                    <div class="time-select-group">
+                                        <select id="altTime1Hour">
+                                            <option value="" selected>HH</option>
+                                            <option>06</option>
+                                            <option>07</option>
+                                            <option>08</option>
+                                            <option>09</option>
+                                            <option>10</option>
+                                            <option>11</option>
+                                            <option>12</option>
+                                            <option>13</option>
+                                            <option>14</option>
+                                            <option>15</option>
+                                            <option>16</option>
+                                            <option>17</option>
+                                            <option>18</option>
+                                            <option>19</option>
+                                            <option>20</option>
+                                            <option>21</option>
+                                            <option>22</option>
+                                            <option>23</option>
+                                        </select>
+                                        <span class="time-colon">:</span>
+                                        <select id="altTime1Min">
+                                            <option value="" selected>MM</option>
+                                            <option value="00">00</option>
+                                            <option value="15">15</option>
+                                            <option value="30">30</option>
+                                            <option value="45">45</option>
+                                        </select>
+                                        <input type="hidden" id="altTime1">
+                                    </div>
                                 </div>
                                 <div class="form-group half">
                                     <label for="altTime2"><i class="fa-solid fa-clock-rotate-left"></i> <span
                                             data-i18n="label-altTime2">Alt. Time 2 (Optional)</span></label>
-                                    <input type="time" id="altTime2" step="900">
+                                    <div class="time-select-group">
+                                        <select id="altTime2Hour">
+                                            <option value="" selected>HH</option>
+                                            <option>06</option>
+                                            <option>07</option>
+                                            <option>08</option>
+                                            <option>09</option>
+                                            <option>10</option>
+                                            <option>11</option>
+                                            <option>12</option>
+                                            <option>13</option>
+                                            <option>14</option>
+                                            <option>15</option>
+                                            <option>16</option>
+                                            <option>17</option>
+                                            <option>18</option>
+                                            <option>19</option>
+                                            <option>20</option>
+                                            <option>21</option>
+                                            <option>22</option>
+                                            <option>23</option>
+                                        </select>
+                                        <span class="time-colon">:</span>
+                                        <select id="altTime2Min">
+                                            <option value="" selected>MM</option>
+                                            <option value="00">00</option>
+                                            <option value="15">15</option>
+                                            <option value="30">30</option>
+                                            <option value="45">45</option>
+                                        </select>
+                                        <input type="hidden" id="altTime2">
+                                    </div>
                                 </div>
                             </div>
 

@@ -1481,3 +1481,46 @@ footer {
         background: rgba(0, 0, 0, 0.35);
     }
 }
+
+/* ── Custom time select group ────────────────────────────── */
+.time-select-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.time-select-group select {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: var(--text-primary);
+    padding: 0.65rem 0.5rem;
+    font-size: 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.time-select-group select:focus {
+    outline: none;
+    border-color: var(--accent-pink);
+    box-shadow: 0 0 0 3px rgba(232, 62, 140, 0.15);
+}
+
+.time-select-group select option {
+    background: #1a1a2e;
+    color: var(--text-primary);
+}
+
+.time-colon {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    line-height: 1;
+    padding: 0 2px;
+}
