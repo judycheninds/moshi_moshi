@@ -386,7 +386,7 @@ app.get('/api/call-stream/:callSid', (req, res) => {
 
 // Route called by Frontend to trigger a REAL out-bound call
 app.post('/api/real-call', async (req, res) => {
-    let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone, uiLanguage } = req.body;
+    let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone, uiLanguage, isRebook, acceptedAltTime } = req.body;
 
     // Optionally link this call to a logged-in user
     let userId = null;
@@ -447,18 +447,28 @@ app.post('/api/real-call', async (req, res) => {
             friendlyDate = dateObj.toLocaleDateString(language || 'ja-JP', { month: 'long', day: 'numeric' });
         } catch (e) { }
 
+        // Build the goal — different for rebook callback vs fresh call
+        let goal;
+        if (isRebook && acceptedAltTime) {
+            goal = `You are calling back this restaurant. You called a few minutes ago and the restaurant said ${time} was unavailable and offered ${acceptedAltTime} instead. You have now confirmed with ${userName} and they ACCEPT the ${acceptedAltTime} slot. Your goal is to book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${acceptedAltTime}. Be warm and reference that you called before. CRITICAL: Never speak the year out loud.`;
+        } else {
+            goal = `Book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${time}.${fallbackText} CRITICAL: Never speak the year out loud.`;
+        }
+
         // Store the goal state BEFORE creating the call to avoid race condition
         activeCalls.set(stateId, {
-            goal: `Book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${time}.${fallbackText} CRITICAL: Never speak the year out loud.`,
+            goal,
             language: language || 'ja-JP',
             uiLanguage: uiLanguage || 'en',
             userName: userName || 'User',
             userPhone: userPhone || 'Not provided',
             userId,
             rawDate: date,
-            rawTime: time,
+            rawTime: isRebook && acceptedAltTime ? acceptedAltTime : time,
             rawPeople: people,
             restaurantPhone: phone,
+            isRebook: !!isRebook,
+            acceptedAltTime: acceptedAltTime || null,
             history: []
         });
 
@@ -520,16 +530,36 @@ app.post('/twilio/voice', (req, res) => {
 
     // The initial thing the AI says to start the conversation — warm, human, personal
     const name = callState ? callState.userName : 'my friend';
-    let greeting = `Hi there! I'm calling on behalf of ${name} to make a reservation. Is this a good time?`;
-    if (targetLang.startsWith('ja')) {
-        greeting = `もしもし、${name}の代わりにご予約のお電話をさせていただいております。今、少しよろしいでしょうか？`;
-    }
-    if (targetLang.toLowerCase().includes('tw') || (targetLang.startsWith('zh') && targetLang.toLowerCase().includes('tw'))) {
-        greeting = `您好，我是代替 ${name} 打電話來預訂座位的。請問現在方便說話嗎？`;
-    } else if (targetLang.startsWith('ko')) {
-        greeting = `안녕하세요, ${name}님을 대신하여 예약 전화를 드렸습니다. 지금 통화 가능하신가요?`;
-    } else if (targetLang.startsWith('zh')) {
-        greeting = `您好，我是代 ${name} 打电话预订座位的。请问现在方便吗？`;
+    const isRebookCall = callState?.isRebook;
+    const acceptedAlt = callState?.acceptedAltTime;
+    let greeting;
+
+    if (isRebookCall && acceptedAlt) {
+        // Callback greetings — reference the prior call naturally
+        if (targetLang.startsWith('ja')) {
+            greeting = `もしもし、先ほどお電話させていただいた、${name}の代理人です。先ほどご提案いただいた${acceptedAlt}の件ですが、${name}に確認しましたところ、その時間でご予約させていただきたいとのことです。よろしいでしょうか？`;
+        } else if (targetLang.toLowerCase().includes('tw') || (targetLang.startsWith('zh') && targetLang.toLowerCase().includes('tw'))) {
+            greeting = `您好，我是剛才代替 ${name} 打電話的。我跟 ${name} 確認過了，我們很樂意接受您提議的 ${acceptedAlt} 這個時間。請問可以幫我們預訂嗎？`;
+        } else if (targetLang.startsWith('ko')) {
+            greeting = `안녕하세요, 조금 전에 ${name}님 대신 전화드렸던 사람입니다. ${name}님께 확인해보니 제안해주신 ${acceptedAlt} 시간에 예약하고 싶다고 하셔서요. 가능할까요?`;
+        } else if (targetLang.startsWith('zh')) {
+            greeting = `您好，我是刚才代 ${name} 打电话的。我和 ${name} 确认过了，我们很愿意接受您提议的 ${acceptedAlt} 这个时间。可以帮我们预订吗？`;
+        } else {
+            greeting = `Hi, I called a little while ago on behalf of ${name}. I've spoken with ${name} and we'd love to accept the ${acceptedAlt} slot you offered. Could you go ahead and book that for us?`;
+        }
+    } else {
+        // Fresh call greetings
+        greeting = `Hi there! I'm calling on behalf of ${name} to make a reservation. Is this a good time?`;
+        if (targetLang.startsWith('ja')) {
+            greeting = `もしもし、${name}の代わりにご予約のお電話をさせていただいております。今、少しよろしいでしょうか？`;
+        }
+        if (targetLang.toLowerCase().includes('tw') || (targetLang.startsWith('zh') && targetLang.toLowerCase().includes('tw'))) {
+            greeting = `您好，我是代替 ${name} 打電話來預訂座位的。請問現在方便說話嗎？`;
+        } else if (targetLang.startsWith('ko')) {
+            greeting = `안녕하세요, ${name}님을 대신하여 예약 전화를 드렸습니다. 지금 통화 가능하신가요?`;
+        } else if (targetLang.startsWith('zh')) {
+            greeting = `您好，我是代 ${name} 打电话预订座位的。请问现在方便吗？`;
+        }
     }
 
     // Save to history

@@ -398,6 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultCard.classList.add('hidden');
         // Try to extract and auto-fill the proposed alternative time into the select dropdowns
         const altOfferText = document.getElementById('altOfferText');
+        let acceptedTime = null;
         if (altOfferText) {
             const altText = altOfferText.textContent || '';
             const timeMatch = altText.match(/\b(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
@@ -412,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     Math.abs(curr - mins) < Math.abs(prev - mins) ? curr : prev, 0);
                 const paddedH = String(hours).padStart(2, '0');
                 const paddedM = String(snappedMins).padStart(2, '0');
+                acceptedTime = `${paddedH}:${paddedM}`;
                 // Set the select dropdowns
                 const hourSel = document.getElementById('timeHour');
                 const minSel = document.getElementById('timeMin');
@@ -419,11 +421,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (hourSel) hourSel.value = paddedH;
                 if (minSel) minSel.value = paddedM;
                 if (hiddenTime) {
-                    hiddenTime.value = `${paddedH}:${paddedM}`;
+                    hiddenTime.value = acceptedTime;
                     hiddenTime.classList.add('autofill-flash');
                     setTimeout(() => hiddenTime.classList.remove('autofill-flash'), 2000);
                 }
-                // Flash the hour select too
                 if (hourSel) {
                     hourSel.classList.add('autofill-flash');
                     setTimeout(() => hourSel.classList.remove('autofill-flash'), 2000);
@@ -432,6 +433,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Mark the next call as a rebook so the agent uses the callback greeting
+        window._isRebook = true;
+        window._acceptedAltTime = acceptedTime || altOfferText?.textContent?.trim() || null;
+
         // Restore button state
         btnText.textContent = translateStr('btn-call');
         callBtn.disabled = false;
@@ -439,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnLoader.classList.add('hidden');
         btnText.classList.remove('hidden');
     });
+
 
     function addLog(text, type) {
         const div = document.createElement('div');
@@ -473,7 +479,10 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(translateStr('init-agent'), 'system');
 
         const agentLang = document.getElementById('agentLang')?.value || 'ja-JP';
-        const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, language: agentLang, uiLanguage: window.currentLang || 'en' };
+        const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, language: agentLang, uiLanguage: window.currentLang || 'en', isRebook: window._isRebook || false, acceptedAltTime: window._acceptedAltTime || null };
+        // Reset rebook flags after use
+        window._isRebook = false;
+        window._acceptedAltTime = null;
         const authHeaders = { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) };
 
         if (callMode === 'schedule') {
