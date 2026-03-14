@@ -520,7 +520,7 @@ app.post('/twilio/voice', (req, res) => {
 
     // The initial thing the AI says to start the conversation — warm, human, personal
     const name = callState ? callState.userName : 'my friend';
-    let greeting = `Hi there! I'm calling on behalf of ${name} to make a dinner reservation. Is this a good time?`;
+    let greeting = `Hi there! I'm calling on behalf of ${name} to make a reservation. Is this a good time?`;
     if (targetLang.startsWith('ja')) {
         greeting = `もしもし、${name}の代わりにご予約のお電話をさせていただいております。今、少しよろしいでしょうか？`;
     }
