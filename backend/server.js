@@ -7,6 +7,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
+const rateLimit = require('express-rate-limit');
 
 // Initialize Supabase (persistent DB)
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -18,6 +19,50 @@ app.use(express.json());
 // Must parse urlencoded forms for Twilio webhooks
 app.use(express.urlencoded({ extended: true }));
 
+// ── Rate Limiting ──────────────────────────────────────────────────────────────
+// Global: 100 requests per 15 minutes per IP
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please slow down.' }
+});
+
+// Strict: max 5 real calls per hour per IP (Twilio costs money!)
+const callLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,  // 1 hour
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Call limit reached. You can make up to 5 reservation calls per hour.' },
+    keyGenerator: (req) => {
+        // Rate-limit by authenticated user ID if available, else by IP
+        try {
+            const authHeader = req.headers['authorization'];
+            if (authHeader?.startsWith('Bearer ')) {
+                const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'moshi_secret_key');
+                return `user_${decoded.id}`;
+            }
+        } catch (e) { /* use IP */ }
+        return req.ip;
+    }
+});
+
+// Auth: max 10 login/register attempts per 15 minutes (brute force protection)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many login attempts. Please try again in 15 minutes.' }
+});
+
+// Apply global limiter to all API routes
+app.use('/api/', globalLimiter);
+
+// ── End Rate Limiting ──────────────────────────────────────────────────────────
+
 // Serve the frontend from the www/ directory (synced with root on every deploy)
 app.use(express.static(path.join(__dirname, '../www')));
 
@@ -27,6 +72,9 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Active Call State Storage (in-memory for demo purposes)
 const activeCalls = new Map();
 const callLogClients = new Map();
+
+
+
 
 function broadcastLog(callSid, role, content) {
     const clients = callLogClients.get(callSid) || [];
@@ -91,7 +139,7 @@ function authMiddleware(req, res, next) {
 }
 
 // POST /api/auth/register
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
     const { email, password, name, phone } = req.body;
     if (!email || !password || !name) return res.status(400).json({ error: 'Email, password and name are required.' });
 
@@ -111,7 +159,7 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // POST /api/auth/login
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
 
@@ -237,7 +285,7 @@ async function placeCall(params, attemptCount = 1) {
 }
 
 // POST /api/schedule-call
-app.post('/api/schedule-call', async (req, res) => {
+app.post('/api/schedule-call', callLimiter, async (req, res) => {
     let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone, scheduledAt } = req.body;
     if (!scheduledAt) return res.status(400).json({ error: 'scheduledAt is required.' });
 
@@ -301,7 +349,7 @@ setInterval(async () => {
 // ==========================================
 // 1. FRONTEND SIMULATION ROUTE
 // ==========================================
-app.post('/api/simulate-call', async (req, res) => {
+app.post('/api/simulate-call', callLimiter, async (req, res) => {
     // Keep the existing simulation code for the UI
     const { phone, date, time, people } = req.body;
     res.setHeader('Content-Type', 'text/event-stream');
@@ -385,7 +433,7 @@ app.get('/api/call-stream/:callSid', (req, res) => {
 // ==========================================
 
 // Route called by Frontend to trigger a REAL out-bound call
-app.post('/api/real-call', async (req, res) => {
+app.post('/api/real-call', callLimiter, async (req, res) => {
     let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone, uiLanguage, isRebook, acceptedAltTime } = req.body;
 
     // Optionally link this call to a logged-in user
