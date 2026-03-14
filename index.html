@@ -72,10 +72,6 @@
                         table. Never worry about language barriers again.</p>
                     <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                         <a href="#reservation" class="btn-primary cta-btn" data-i18n="hero-btn">Start Calling Now</a>
-                        <button class="btn-secondary download-btn"
-                            style="border-width: 2px; font-size: 1.1rem; padding: 0.8rem 1.8rem;"><i
-                                class="fa-solid fa-download"></i> <span data-i18n="nav-download">Download
-                                App</span></button>
                     </div>
                 </div>
             </div>
@@ -257,10 +253,19 @@
                         </div>
 
                         <div class="result-card hidden" id="resultCard">
-                            <div class="result-icon success"><i class="fa-regular fa-circle-check"></i></div>
+                            <div class="result-icon success" id="resultStatusIcon"><i
+                                    class="fa-regular fa-circle-check"></i></div>
                             <h3 id="resultTitle" data-i18n="result-title-success">Reservation Confirmed!</h3>
                             <p id="resultDesc">Your table for 2 on Oct 24th at 19:00 is successfully booked. A deposit
                                 of $50 was held.</p>
+
+                            <div id="altOfferBox" class="alt-offer-box hidden">
+                                <h4 data-i18n="alt-offer-title">Alternative Provided</h4>
+                                <div class="alt-offer-text" id="altOfferText">—</div>
+                                <button class="btn-primary" id="rebookBtn" style="margin-top: 1rem; width: 100%;"
+                                    data-i18n="btn-rebook">Accept & Rebook</button>
+                            </div>
+
                             <div id="resultTranscript" class="call-log"
                                 style="height: 200px; overflow-y: auto; overflow-x: hidden; margin-bottom: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; width: 100%; text-align: left;">
                             </div>

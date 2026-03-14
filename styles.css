@@ -404,7 +404,9 @@ h3 {
     flex: 1;
 }
 
-input {
+input,
+select,
+textarea {
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: white;
@@ -413,6 +415,8 @@ input {
     font-family: inherit;
     font-size: 1rem;
     transition: border-color 0.3s, box-shadow 0.3s;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 input:focus {
@@ -693,8 +697,38 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     color: #27c93f;
 }
 
+.result-icon.alternative {
+    color: var(--accent-gold);
+}
+
 .result-icon.error {
     color: var(--primary-red);
+}
+
+.alt-offer-box {
+    background: rgba(244, 197, 66, 0.1);
+    border: 1px solid rgba(244, 197, 66, 0.25);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0 2rem 0;
+    width: 100%;
+    animation: fadeInUp 0.4s ease;
+}
+
+.alt-offer-box h4 {
+    color: var(--accent-gold);
+    margin-bottom: 0.6rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+}
+
+.alt-offer-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-main);
+    line-height: 1.4;
 }
 
 #resultDesc {
@@ -1054,21 +1088,20 @@ footer {
     }
 
     .nav-links .login-btn span {
-        display: none;
+        display: inline-block;
     }
 
     .nav-links .login-btn {
-        padding: 0.6rem;
-        aspect-ratio: 1/1;
+        padding: 0.6rem 1.2rem;
+        border-radius: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
+        gap: 8px;
     }
 
     .nav-links .login-btn i {
-        margin: 0;
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
 }
 
@@ -1175,7 +1208,7 @@ footer {
 
 /* ---- CRM Dashboard Modal ---- */
 .crm-modal {
-    width: 100%;
+    width: 90% !important;
     max-width: 560px;
     padding: 2.5rem;
     position: relative;
@@ -1183,6 +1216,12 @@ footer {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--accent-gold) transparent;
+}
+
+@media (max-width: 600px) {
+    .crm-modal {
+        padding: 2rem 1.5rem;
+    }
 }
 
 .crm-header {

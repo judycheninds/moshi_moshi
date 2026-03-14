@@ -35,6 +35,35 @@ function broadcastLog(callSid, role, content) {
     });
 }
 
+// Helper to translate and then broadcast. Since transcription comes in fast, this is done asynchronously to not block Twilio
+async function translateAndBroadcastLog({ callSid, role, content, callState }) {
+    if (!content || ["system", "status"].includes(role)) {
+        return broadcastLog(callSid, role, content);
+    }
+
+    const tLang = (callState?.language || 'ja').toLowerCase().split('-')[0];
+    const uiLang = (callState?.uiLanguage || 'en').toLowerCase().split('-')[0];
+
+    // If they already speak the UI language, skip translation
+    if (tLang === uiLang) {
+        return broadcastLog(callSid, role, content);
+    }
+
+    try {
+        const uiLangCode = callState?.uiLanguage || 'en';
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const prompt = `Translate the following conversational text into the language code/locale '${uiLangCode}'. Respond ONLY with the exact translated text, nothing else. No markdown, no quotes.\n\nText: "${content}"`;
+        const result = await model.generateContent(prompt);
+        let translatedText = result.response.text().trim();
+
+        // Broadcast the original text alongside the translated version
+        broadcastLog(callSid, role, `${content}\n(${translatedText})`);
+    } catch (e) {
+        console.error("Translation failed:", e.message);
+        broadcastLog(callSid, role, content);
+    }
+}
+
 // Initialize Twilio conditionally (prevents crashing if not set up yet)
 let twilioClient = null;
 if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_ACCOUNT_SID.startsWith('AC')) {
@@ -185,7 +214,8 @@ async function placeCall(params, attemptCount = 1) {
 
     activeCalls.set(stateId, {
         goal: `Book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${time}.${fallbackText} CRITICAL: Never speak the year out loud. If the time is unavailable, ask what times they DO have available.`,
-        language: targetLang,
+        language: language || 'ja-JP',
+        uiLanguage: uiLanguage || 'en',
         userName: userName || 'Guest',
         userPhone: userPhone || 'Not provided',
         userId, scheduledCallId: scheduledCallId || null,
@@ -356,7 +386,7 @@ app.get('/api/call-stream/:callSid', (req, res) => {
 
 // Route called by Frontend to trigger a REAL out-bound call
 app.post('/api/real-call', async (req, res) => {
-    let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone } = req.body;
+    let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone, uiLanguage } = req.body;
 
     // Optionally link this call to a logged-in user
     let userId = null;
@@ -421,6 +451,7 @@ app.post('/api/real-call', async (req, res) => {
         activeCalls.set(stateId, {
             goal: `Book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${time}.${fallbackText} CRITICAL: Never speak the year out loud.`,
             language: language || 'ja-JP',
+            uiLanguage: uiLanguage || 'en',
             userName: userName || 'User',
             userPhone: userPhone || 'Not provided',
             userId,
@@ -468,23 +499,23 @@ app.post('/twilio/voice', (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW'; // Specific STT for Taiwan
-        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Google Wavenet (best available for TW Mandarin)
+        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Google Wavenet for Taiwan
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Google.cmn-CN-Neural2-D'; // Google Neural2 Mandarin CN female
+        twilioVoice = 'Google.cmn-CN-Wavenet-D'; // Google Wavenet for Mainland China
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese female
+        twilioVoice = 'Polly.Kazuha-Neural'; // Amazon Polly Neural
     } else if (targetLang.startsWith('ko')) {
         sayLang = 'ko-KR';
         gatherLang = 'ko-KR';
-        twilioVoice = 'Google.ko-KR-Neural2-A'; // Google Neural2 Korean
+        twilioVoice = 'Polly.Seoyeon-Neural'; // Amazon Polly Neural
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Google.en-US-Neural2-F'; // Google Neural2 English female
+        twilioVoice = 'Polly.Salli-Neural'; // Amazon Polly Neural
     }
 
     // The initial thing the AI says to start the conversation — warm, human, personal
@@ -504,7 +535,7 @@ app.post('/twilio/voice', (req, res) => {
     // Save to history
     if (callState) {
         callState.history.push({ role: 'user', content: greeting }); // AI plays "user" role to the model
-        broadcastLog(callSid, 'agent', greeting);
+        translateAndBroadcastLog({ callSid, role: 'agent', content: greeting, callState });
     }
 
     // Use Twilio's reliable voice mapped to local language
@@ -515,7 +546,7 @@ app.post('/twilio/voice', (req, res) => {
         input: 'speech',
         language: gatherLang,
         action: publicUrl + '/twilio/gather-result',
-        speechTimeout: 'auto',
+        speechTimeout: '1',
         timeout: 10
     });
 
@@ -539,23 +570,23 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW';
-        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Google Wavenet (best available for TW Mandarin)
+        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Google Wavenet for Taiwan
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Google.cmn-CN-Neural2-D'; // Google Neural2 Mandarin CN female
+        twilioVoice = 'Google.cmn-CN-Wavenet-D'; // Google Wavenet for Mainland China
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese female
+        twilioVoice = 'Polly.Kazuha-Neural'; // Amazon Polly Neural
     } else if (targetLang.startsWith('ko')) {
         sayLang = 'ko-KR';
         gatherLang = 'ko-KR';
-        twilioVoice = 'Google.ko-KR-Neural2-A';
+        twilioVoice = 'Polly.Seoyeon-Neural'; // Amazon Polly Neural
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Google.en-US-Neural2-F'; // Google Neural2 English female
+        twilioVoice = 'Polly.Salli-Neural'; // Amazon Polly Neural
     }
 
     const langNames = {
@@ -570,7 +601,7 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (transcribedText && callState) {
         console.log(`[Restaurant] ${transcribedText}`);
         callState.history.push({ role: 'model', content: transcribedText }); // The restaurant is playing the "prompt"
-        broadcastLog(callSid, 'restaurant', transcribedText);
+        translateAndBroadcastLog({ callSid, role: 'restaurant', content: transcribedText, callState });
 
         // Build the prompt for Gemini to decide what the AI should say next
         const prompt = `
@@ -588,27 +619,43 @@ app.post('/twilio/gather-result', async (req, res) => {
 
             [HOW TO RESPOND — READ CAREFULLY]
             1. Respond warmly and naturally, exactly as a real human assistant would on the phone. You are calling on behalf of ${callState.userName}.
-            2. Use natural conversational phrases. It's totally fine to say things like "Of course!", "Sure thing!", "Oh wonderful!", "Let me check...", "That sounds perfect!", "Great, thank you so much!" — but only when it fits naturally.
-            3. When confirming the reservation details (date, time, party size, name), do it clearly but warmly. For example: "It would be for ${callState.userName}, party of X, on [date] at [time]."
-            4. If they ask for a contact name, say the reservation is under the name "${callState.userName}".
-            5. If they ask for a callback number, give them: "${callState.userPhone}".
-            6. If the requested time is unavailable, stay calm and politely ask what other times are available, or suggest the fallback times from the objective.
-            7. Once the reservation is fully confirmed, warmly thank them and say a natural goodbye.
-            8. CRITICAL: Output ONLY the raw spoken text — no quotes, no stage directions, no emojis, no markdown. Just the words to speak.
-            9. CRITICAL: You MUST speak exclusively in ${langName} for this entire turn. BCP-47: '${targetLang}'. Do NOT mix languages or include translations.
-            10. Keep your response concise — this is a phone call, not an essay. Speak naturally and don't ramble.
+            2. Use natural conversational phrases. In English, use things like "Of course!", "Let me check...". If speaking in Chinese, you MUST use native, conversational idioms like "好的没问题" (Okay, no problem), "稍等一下我看看" (Let me check), "好的太感谢了" (Okay, thank you so much), instead of awkward literal translations of English idioms. Do not be overly formal or robotic.
+            3. NEVER start sentences with filler words like "Oh", "Um", or "Ah" (e.g., do not say "Oh, okay" or "Oh, I see"). Be direct and precise in your conversation.
+            4. When confirming the reservation details (date, time, party size, name), do it clearly but warmly. For example: "It would be for ${callState.userName}, party of X, on [date] at [time]."
+            5. If they ask for a contact name, say the reservation is under the name "${callState.userName}".
+            6. If they ask for a callback number, give them: "${callState.userPhone}".
+            7. If the requested time is unavailable, politely ask what other times are available. DO NOT confirm a different time unless it was explicitly provided in your instructions as an acceptable alternative from the user. If they propose a different time/day that was not approved, politely say you need to check with your client and end the call smoothly.
+            8. Once the reservation is fully confirmed (either original or approved alternative time), warmly thank them and say a natural goodbye.
+            9. CRITICAL: Output ONLY the raw spoken text — no quotes, no stage directions, no emojis, no markdown. Just the words to speak.
+            10. CRITICAL: You MUST speak exclusively in ${langName} for this entire turn. BCP-47: '${targetLang}'. Do NOT mix languages or include translations.
+            11. If the restaurant has an automated system (IVR) that asks you to press a number (e.g., "Press 1 to speak to a representative"), you MUST output the exact command [PRESS:X] where X is the number to press. For example, output [PRESS:1] to press 1. You can still speak normally before or after the command if needed.
+            12. Keep your response concise — this is a phone call, not an essay. Speak naturally and don't ramble.
         `;
 
         try {
             const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
             const aiResponse = await model.generateContent(prompt);
-            const responseText = aiResponse.response.text().trim();
+            let responseText = aiResponse.response.text().trim();
+            let digitsToPress = null;
 
-            console.log(`[AI Agent] ${responseText}`);
-            callState.history.push({ role: 'user', content: responseText });
-            broadcastLog(callSid, 'agent', responseText);
+            // Extract [PRESS:X] if the AI decided to press a button
+            const pressMatch = responseText.match(/\[PRESS:([\d\*\#]+)\]/i);
+            if (pressMatch) {
+                digitsToPress = pressMatch[1];
+                responseText = responseText.replace(pressMatch[0], '').trim();
+            }
 
-            twiml.say({ voice: twilioVoice, language: sayLang }, responseText);
+            console.log(`[AI Agent] ${responseText} ${digitsToPress ? `(Pressing ${digitsToPress})` : ''}`);
+            callState.history.push({ role: 'user', content: responseText + (digitsToPress ? ` [Pressed ${digitsToPress}]` : '') });
+            translateAndBroadcastLog({ callSid, role: 'agent', content: responseText + (digitsToPress ? ` [Pressed ${digitsToPress}]` : ''), callState });
+
+            if (responseText) {
+                twiml.say({ voice: twilioVoice, language: sayLang }, responseText);
+            }
+
+            if (digitsToPress) {
+                twiml.play({ digits: digitsToPress });
+            }
 
             // Pass the stateId forward to the next gather result
             const actionUrl = stateId ? `${publicUrl}/twilio/gather-result?stateId=${stateId}` : `${publicUrl}/twilio/gather-result`;
@@ -617,7 +664,7 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: actionUrl,
-                speechTimeout: 'auto',
+                speechTimeout: '1',
                 timeout: 10
             });
         } catch (e) {
@@ -637,7 +684,7 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: actionUrl,
-                speechTimeout: 'auto',
+                speechTimeout: '1',
                 timeout: 10
             });
         }
@@ -741,7 +788,7 @@ app.post('/twilio/call-status', async (req, res) => {
 
             // Gemini evaluates outcome AND extracts alternatives
             const evalPrompt = `
-                You are evaluating a phone call where an AI assistant tried to book a restaurant reservation.
+                You are evaluating a phone call where an AI assistant tried to book a restaurant reservation at ${callState.rawTime}.
                 
                 CONVERSATION:
                 ${conversation}
@@ -749,6 +796,7 @@ app.post('/twilio/call-status', async (req, res) => {
                 Answer with ONLY a JSON object (no markdown, no explanation):
                 {
                   "success": true or false,
+                  "confirmedTime": "string of the final confirmed time if it was successfully booked (e.g. '19:30'), or null",
                   "alternatives": "string describing any alternative times/dates the restaurant mentioned, or null if none",
                   "notes": "one sentence summary of what happened"
                 }
@@ -763,13 +811,21 @@ app.post('/twilio/call-status', async (req, res) => {
             // Strip markdown code fences if Gemini adds them
             rawText = rawText.replace(/```json|```/g, '').trim();
 
-            let evalResult = { success: false, alternatives: null, notes: '' };
+            let evalResult = { success: false, confirmedTime: null, alternatives: null, notes: '' };
             try { evalResult = JSON.parse(rawText); } catch (e) {
                 evalResult.success = rawText.includes('"success":true') || rawText.includes('"success": true');
             }
 
             const isSuccess = evalResult.success === true;
-            broadcastLog(callSid, 'status', isSuccess ? 'success' : 'failed');
+            const statusType = isSuccess ? 'success' : (evalResult.alternatives ? 'alternative' : 'failed');
+
+            broadcastLog(callSid, 'status', JSON.stringify({
+                type: statusType,
+                confirmedTime: evalResult.confirmedTime,
+                alternatives: evalResult.alternatives,
+                notes: evalResult.notes
+            }));
+
             if (evalResult.alternatives) broadcastLog(callSid, 'agent', `💡 Alternatives: ${evalResult.alternatives}`);
 
             // Save to CRM

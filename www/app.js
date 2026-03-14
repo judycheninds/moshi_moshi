@@ -372,6 +372,24 @@ document.addEventListener('DOMContentLoaded', () => {
         dateInput.value = today;
     });
 
+    document.getElementById('rebookBtn')?.addEventListener('click', () => {
+        resultCard.classList.add('hidden');
+        // Highlight the time field so they can enter the alternative
+        const timeInput = document.getElementById('time');
+        if (timeInput) {
+            timeInput.focus();
+            timeInput.classList.add('autofill-flash');
+            setTimeout(() => timeInput.classList.remove('autofill-flash'), 2000);
+        }
+
+        // Restore button state
+        btnText.textContent = translateStr('btn-call');
+        callBtn.disabled = false;
+        callBtn.style.opacity = '1';
+        btnLoader.classList.add('hidden');
+        btnText.classList.remove('hidden');
+    });
+
     function addLog(text, type) {
         const div = document.createElement('div');
         div.className = `log-entry ${type}`;
@@ -405,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(translateStr('init-agent'), 'system');
 
         const agentLang = document.getElementById('agentLang')?.value || 'ja-JP';
-        const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, language: agentLang };
+        const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, language: agentLang, uiLanguage: window.currentLang || 'en' };
         const authHeaders = { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) };
 
         if (callMode === 'schedule') {
@@ -469,11 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (msg.role === 'status') {
                                 eventSource.close();
                                 clearTimeout(emergencyTimeout);
-                                if (msg.content === 'success') {
-                                    finishCall(true, date, time, people, userPhone, userName);
-                                } else {
-                                    finishCall(false, date, time, people, userPhone, userName);
-                                }
+                                finishCall(msg.content, date, time, people, userPhone, userName);
                             } else if (msg.role === 'agent') {
                                 addLog(msg.content, 'agent');
                             } else if (msg.role === 'restaurant') {
@@ -486,18 +500,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         eventSource.onerror = () => {
                             eventSource.close();
                             clearTimeout(emergencyTimeout);
-                            finishCall(false, date, time, people, userPhone, userName);
+                            finishCall('failed', date, time, people, userPhone, userName);
                         };
 
                         // Absolute fallback if the AI somehow gets stuck in an infinite loop
                         emergencyTimeout = setTimeout(() => {
                             eventSource.close();
-                            finishCall(true, date, time, people, userPhone, userName);
+                            finishCall('success', date, time, people, userPhone, userName);
                         }, 60000); // 60s maximum duration
 
                     } else {
                         addLog(`${translateStr('error-prefix')} ${data.error}`, 'error');
-                        finishCall(false, date, time, people, userPhone, userName);
+                        finishCall('failed', date, time, people, userPhone, userName);
                     }
                 }).catch(err => {
                     addLog(translateStr('failed-backend'), 'error');
@@ -506,12 +520,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function finishCall(success, date, time, people, userPhone, userName) {
+    function finishCall(statusInfo, date, time, people, userPhone, userName) {
         agentContainer.classList.remove('calling');
         agentStatusText.textContent = translateStr('agent-standby');
 
+        let isSuccess = statusInfo === true || statusInfo === 'success';
+        let isAlternative = false;
+        let alternatives = null;
+        let confirmedTime = null;
+
+        if (typeof statusInfo === 'string' && statusInfo.startsWith('{')) {
+            try {
+                const parsed = JSON.parse(statusInfo);
+                isSuccess = parsed.type === 'success';
+                isAlternative = parsed.type === 'alternative';
+                alternatives = parsed.alternatives;
+                confirmedTime = parsed.confirmedTime;
+            } catch (e) { }
+        }
+
+        // Fix resultCard state
+        const altOfferBox = document.getElementById('altOfferBox');
+        const altOfferText = document.getElementById('altOfferText');
+        const resultStatusIcon = document.getElementById('resultStatusIcon');
+
+        altOfferBox?.classList.add('hidden');
+
         // If they missed the live call due to Twilio trial dropping it, mock an interactive transcript so they can see what it looks like!
-        if (success && callLogContainer.querySelectorAll('.restaurant').length === 0) {
+        if (isSuccess && callLogContainer.querySelectorAll('.restaurant').length === 0) {
             const time = new Date().toLocaleTimeString('en-US', { hour12: false });
             const mockLogs = `
                 <div class="log-entry system">[${time}] Initializing Gemini 2.5 Flash Speech-To-Text...</div>
@@ -526,59 +562,57 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let resultTranscript = document.getElementById('resultTranscript');
-        if (!resultTranscript) {
-            // Circumvent index.html device caching
-            resultTranscript = document.createElement('div');
-            resultTranscript.id = 'resultTranscript';
-            resultTranscript.className = 'call-log';
-            resultTranscript.style.cssText = 'height: 200px; overflow-y: auto; overflow-x: hidden; margin-bottom: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; width: 100%; text-align: left;';
-            resultCard.insertBefore(resultTranscript, resetBtn);
+        if (resultTranscript) {
+            resultTranscript.innerHTML = callLogContainer.innerHTML;
+            const logEntries = resultTranscript.querySelectorAll('.log-entry');
+            logEntries.forEach(entry => {
+                entry.style.animation = 'none';
+                entry.style.opacity = '1';
+                entry.style.transform = 'none';
+            });
+            resultTranscript.scrollTop = resultTranscript.scrollHeight;
         }
 
-        resultTranscript.innerHTML = callLogContainer.innerHTML;
-
-        // Ensure child elements stay permanently visible inside the container
-        const logEntries = resultTranscript.querySelectorAll('.log-entry');
-        logEntries.forEach(entry => {
-            entry.style.animation = 'none';
-            entry.style.opacity = '1';
-            entry.style.transform = 'none';
-        });
-
-        resultTranscript.scrollTop = resultTranscript.scrollHeight;
-
-        // Simulate success vs failure
-        if (success) {
-            resultIcon.className = 'result-icon success';
-            resultIcon.innerHTML = '<i class="fa-regular fa-circle-check"></i>';
+        // Update UI based on status
+        if (isSuccess) {
+            resultStatusIcon.className = 'result-icon success';
+            resultStatusIcon.innerHTML = '<i class="fa-regular fa-circle-check"></i>';
             resultTitle.textContent = translateStr('result-title-success');
 
-            // Format nice date output
             const dateObj = new Date(date);
             const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+            const finalTime = (confirmedTime && confirmedTime !== 'null' && confirmedTime.trim() !== '') ? confirmedTime : time;
 
             resultDesc.textContent = translateStr('success-msg')
                 .replace('{people}', people)
                 .replace('{dateStr}', dateStr)
-                .replace('{time}', time);
+                .replace('{time}', finalTime);
 
-            resultCard.classList.remove('hidden');
-
-            // Trigger the SMS Confirmation 
             if (userPhone) {
                 fetch('https://moshi-moshi-8dh6.onrender.com/api/send-sms', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userName, userPhone, date: dateStr, time, people })
+                    body: JSON.stringify({ userName, userPhone, date: dateStr, time: finalTime, people })
                 }).then(() => console.log('SMS confirmation sent!'));
             }
+        } else if (isAlternative) {
+            resultStatusIcon.className = 'result-icon alternative';
+            resultStatusIcon.innerHTML = '<i class="fa-solid fa-calendar-day"></i>';
+            resultTitle.textContent = translateStr('alt-offer-title') || 'Alternative Provided';
+            resultDesc.textContent = translateStr('alt-offer-desc') || "The requested time wasn't available, but the restaurant suggested another slot:";
+
+            if (altOfferBox && altOfferText) {
+                altOfferText.textContent = alternatives;
+                altOfferBox.classList.remove('hidden');
+            }
         } else {
-            // Unused failure path for now, but ready
-            resultIcon.className = 'result-icon error';
-            resultIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+            resultStatusIcon.className = 'result-icon error';
+            resultStatusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
             resultTitle.textContent = translateStr('reservation-failed');
             resultDesc.textContent = translateStr('failed-msg').replace('{time}', time);
-            resultCard.classList.remove('hidden');
         }
+
+        resultCard.classList.remove('hidden');
     }
 });
