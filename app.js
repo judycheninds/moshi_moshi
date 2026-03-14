@@ -374,12 +374,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('rebookBtn')?.addEventListener('click', () => {
         resultCard.classList.add('hidden');
-        // Highlight the time field so they can enter the alternative
+        // Try to extract and auto-fill the proposed alternative time
+        const altOfferText = document.getElementById('altOfferText');
         const timeInput = document.getElementById('time');
-        if (timeInput) {
+        if (altOfferText && timeInput) {
+            // Try to parse a time like "12:30", "12:30pm", "12" from the alt offer text
+            const altText = altOfferText.textContent || '';
+            const timeMatch = altText.match(/\b(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
+            if (timeMatch) {
+                let hours = parseInt(timeMatch[1]);
+                const mins = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+                const meridian = (timeMatch[3] || '').toLowerCase();
+                if (meridian === 'pm' && hours < 12) hours += 12;
+                if (meridian === 'am' && hours === 12) hours = 0;
+                const paddedH = String(hours).padStart(2, '0');
+                const paddedM = String(mins).padStart(2, '0');
+                timeInput.value = `${paddedH}:${paddedM}`;
+                timeInput.classList.add('autofill-flash');
+                setTimeout(() => timeInput.classList.remove('autofill-flash'), 2000);
+            }
             timeInput.focus();
-            timeInput.classList.add('autofill-flash');
-            setTimeout(() => timeInput.classList.remove('autofill-flash'), 2000);
         }
 
         // Restore button state
