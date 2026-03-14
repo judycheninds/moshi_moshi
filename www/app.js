@@ -375,6 +375,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
+
+        // --- Enforce Login Before Calling ---
+        if (!authToken || !currentUser) {
+            loginModal.classList.remove('hidden');
+            showModalError('Please sign in to make a reservation.');
+            return;
+        }
+
         startCallSimulation();
     });
 
