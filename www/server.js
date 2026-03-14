@@ -784,7 +784,9 @@ app.post('/twilio/call-status', async (req, res) => {
         broadcastLog(callSid, 'system', 'Call ended. Evaluating outcome...');
 
         try {
-            const conversation = callState.history.map(m => `[${m.role}]: ${m.content}`).join('\n');
+            // IMPORTANT: Roles are stored as 'user' (agent) and 'model' (restaurant) — re-label for clarity
+            const conversation = callState.history.map(m => `[${m.role === 'user' ? 'Agent' : 'Restaurant'}]: ${m.content}`).join('\n');
+            console.log('[Eval] Conversation transcript:\n', conversation);
 
             // Gemini evaluates outcome AND extracts alternatives
             const evalPrompt = `
@@ -817,9 +819,15 @@ app.post('/twilio/call-status', async (req, res) => {
             // Strip markdown code fences if Gemini adds them
             rawText = rawText.replace(/```json|```/g, '').trim();
 
+            console.log('[Eval] Raw Gemini evaluation result:', rawText);
+
             let evalResult = { success: false, confirmedTime: null, alternatives: null, notes: '' };
-            try { evalResult = JSON.parse(rawText); } catch (e) {
-                evalResult.success = rawText.includes('"success":true') || rawText.includes('"success": true');
+            try {
+                evalResult = JSON.parse(rawText);
+            } catch (e) {
+                console.error('[Eval] JSON parse failed, raw text was:', rawText);
+                // Only fall back to text search if truly unparseable
+                evalResult.success = false; // Default to failure — safer than false positives
             }
 
             const isSuccess = evalResult.success === true;
