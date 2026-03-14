@@ -112,6 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('mm_token', token);
         localStorage.setItem('mm_user', JSON.stringify(user));
         loginBtn.innerHTML = `<span>${user.name}</span> <i class="fa-solid fa-user"></i>`;
+        document.getElementById('loginPromptContainer')?.classList.add('hidden');
+        document.getElementById('reservationFormContainer')?.classList.remove('hidden');
     }
 
     function clearAuth() {
@@ -120,6 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('mm_token');
         localStorage.removeItem('mm_user');
         loginBtn.innerHTML = `<span data-i18n="nav-login">Login / Sign Up</span> <i class="fa-solid fa-arrow-right-to-bracket"></i>`;
+        document.getElementById('loginPromptContainer')?.classList.remove('hidden');
+        document.getElementById('reservationFormContainer')?.classList.add('hidden');
         // Clear pre-filled fields
         const nameEl = document.getElementById('userName');
         const phoneEl = document.getElementById('userPhone');
@@ -146,7 +150,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (authToken && currentUser) {
         loginBtn.innerHTML = `<span>${currentUser.name}</span> <i class="fa-solid fa-user"></i>`;
         fillUserForm(currentUser);
+        document.getElementById('loginPromptContainer')?.classList.add('hidden');
+        document.getElementById('reservationFormContainer')?.classList.remove('hidden');
     }
+
+    // Set up new login prompt button
+    document.getElementById('loginPromptBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('loginModal').classList.remove('hidden');
+    });
 
 
     // ---- Login Modal Logic ----
@@ -602,6 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let isAlternative = false;
         let alternatives = null;
         let confirmedTime = null;
+        let notes = null;
 
         if (typeof statusInfo === 'string' && statusInfo.startsWith('{')) {
             try {
@@ -610,6 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isAlternative = parsed.type === 'alternative';
                 alternatives = parsed.alternatives;
                 confirmedTime = parsed.confirmedTime;
+                notes = parsed.notes;
             } catch (e) { }
         }
 
@@ -683,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             resultStatusIcon.className = 'result-icon error';
             resultStatusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
-            resultTitle.textContent = translateStr('reservation-failed');
+            resultTitle.textContent = translateStr('reservation-failed') || 'Reservation Failed';
 
             if (alternatives) {
                 // Show failure + the restaurant's proposed alternative
@@ -692,8 +706,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     altOfferText.textContent = alternatives;
                     altOfferBox.classList.remove('hidden');
                 }
+            } else if (notes) {
+                resultDesc.textContent = `${notes} Do you want to call again?`;
             } else {
-                resultDesc.textContent = translateStr('failed-msg').replace('{time}', time);
+                resultDesc.textContent = (translateStr('failed-msg') || '').replace('{time}', time);
             }
         }
 

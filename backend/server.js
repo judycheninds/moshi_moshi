@@ -384,7 +384,7 @@ setInterval(async () => {
 // ==========================================
 // 1. FRONTEND SIMULATION ROUTE
 // ==========================================
-app.post('/api/simulate-call', callLimiter, async (req, res) => {
+app.post('/api/simulate-call', authMiddleware, callLimiter, async (req, res) => {
     // Keep the existing simulation code for the UI
     const { phone, date, time, people } = req.body;
     res.setHeader('Content-Type', 'text/event-stream');
@@ -468,18 +468,11 @@ app.get('/api/call-stream/:callSid', (req, res) => {
 // ==========================================
 
 // Route called by Frontend to trigger a REAL out-bound call
-app.post('/api/real-call', callLimiter, async (req, res) => {
+app.post('/api/real-call', authMiddleware, callLimiter, async (req, res) => {
     let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone, uiLanguage, isRebook, acceptedAltTime } = req.body;
 
-    // Optionally link this call to a logged-in user
-    let userId = null;
-    try {
-        const authHeader = req.headers['authorization'];
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
-            userId = decoded.id;
-        }
-    } catch (e) { /* anonymous call is fine */ }
+    // Use logged in user ID
+    let userId = req.user.id;
 
     // Helper to silently fix non-E164 local phone numbers (like 0912... -> +886912...)
     const formatPhone = (ph, langStr) => {
