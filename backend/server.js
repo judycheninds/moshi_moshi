@@ -788,6 +788,69 @@ app.post('/twilio/call-status', async (req, res) => {
             const conversation = callState.history.map(m => `[${m.role === 'user' ? 'Agent' : 'Restaurant'}]: ${m.content}`).join('\n');
             console.log('[Eval] Conversation transcript:\n', conversation);
 
+            // ── PRE-CHECK: Scan last agent message for goodbye-without-booking phrases ──
+            // This is more reliable than Gemini for multilingual calls
+            const agentMessages = callState.history.filter(m => m.role === 'user').map(m => m.content);
+            const lastAgentMsg = (agentMessages[agentMessages.length - 1] || '').toLowerCase();
+            const restaurantMessages = callState.history.filter(m => m.role === 'model').map(m => m.content);
+            const allRestaurantText = restaurantMessages.join(' ').toLowerCase();
+
+            // Phrases indicating the agent ended the call WITHOUT a confirmed booking
+            const noBookingPhrases = [
+                'check with my client', 'check with the client', 'get back to you', 'call back',
+                'need to check', '需要確認', '確認後再', '再聯絡', '跟我的客戶確認', '向客戶確認',
+                '確認一下', '再打來', 'また確認', 'また連絡', 'クライアントに確認',
+                '고객에게 확인', '다시 연락'
+            ];
+
+            // Phrases indicating the restaurant had NO availability at the original time
+            const noAvailabilityPhrases = [
+                'fully booked', 'no availability', 'no table', 'unavailable', 'cannot accommodate',
+                '満席', '予約が取れません', '空きがない', '空席なし',
+                '客滿', '沒有位子', '沒有空位', '無法預約',
+                '예약이 꽉 찼', '자리가 없', '만석'
+            ];
+
+            const agentSaidGoodbyeWithoutBooking = noBookingPhrases.some(p => lastAgentMsg.includes(p));
+            const restaurantSaidFull = noAvailabilityPhrases.some(p => allRestaurantText.includes(p));
+
+            console.log('[Eval] Last agent message:', lastAgentMsg);
+            console.log('[Eval] Agent said goodbye without booking:', agentSaidGoodbyeWithoutBooking);
+            console.log('[Eval] Restaurant said full:', restaurantSaidFull);
+
+            // Extract any times mentioned by the restaurant (simple pattern)
+            const timePattern = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM|時|시)?)/g;
+            const restaurantTimeMatches = allRestaurantText.match(timePattern) || [];
+            const originalTime = (callState.rawTime || '').replace(/^0/, '');
+            const proposedTimes = restaurantTimeMatches.filter(t => !t.replace(/\s/g, '').includes(originalTime.replace(':', '').replace(/^0/, '')));
+
+            if (agentSaidGoodbyeWithoutBooking || restaurantSaidFull) {
+                const altStr = proposedTimes.length > 0 ? proposedTimes.join(' or ') : null;
+                console.log('[Eval] PRE-CHECK failed — agent left without booking. Alternatives:', altStr);
+                const statusType = altStr ? 'alternative' : 'failed';
+                broadcastLog(callSid, 'status', JSON.stringify({
+                    type: statusType,
+                    confirmedTime: null,
+                    alternatives: altStr,
+                    notes: 'Restaurant was unavailable at the requested time.'
+                }));
+                if (altStr) broadcastLog(callSid, 'agent', `💡 Alternatives: ${altStr}`);
+                // Still save to CRM
+                if (callState.userId) {
+                    saveReservation(callState.userId, {
+                        restaurantPhone: callState.restaurantPhone,
+                        date: callState.rawDate, time: callState.rawTime,
+                        people: callState.rawPeople, guestName: callState.userName,
+                        status: 'failed', attemptCount: callState.attemptCount || 1,
+                        alternatives: altStr, notes: 'Restaurant unavailable at requested time.', callSid
+                    });
+                }
+                activeCalls.delete(callSid);
+                res.sendStatus(200);
+                return;
+            }
+            // ── END PRE-CHECK ──
+
             // Gemini evaluates outcome AND extracts alternatives
             const evalPrompt = `
                 You are evaluating a phone call where an AI assistant tried to book a restaurant reservation at ${callState.rawTime} on ${callState.rawDate}.
