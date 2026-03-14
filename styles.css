@@ -635,6 +635,8 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .log-entry {
     padding-bottom: 6px;
     border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .log-entry.system {

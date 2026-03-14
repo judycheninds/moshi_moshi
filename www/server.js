@@ -57,7 +57,7 @@ async function translateAndBroadcastLog({ callSid, role, content, callState }) {
         let translatedText = result.response.text().trim();
 
         // Broadcast the original text alongside the translated version
-        broadcastLog(callSid, role, `${content}\n(${translatedText})`);
+        broadcastLog(callSid, role, `${content}\n\n[Translation]: ${translatedText}`);
     } catch (e) {
         console.error("Translation failed:", e.message);
         broadcastLog(callSid, role, content);
