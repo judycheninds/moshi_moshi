@@ -480,18 +480,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // Listen to the live conversation via SSE
                         const eventSource = new EventSource(`https://moshi-moshi-8dh6.onrender.com/api/call-stream/${data.callSid}`);
-                        let emergencyTimeout;
+                        // Guard: prevent finishCall from running more than once per call
+                        let callFinished = false;
+                        const safeFinish = (status) => {
+                            if (callFinished) return;
+                            callFinished = true;
+                            finishCall(status, date, time, people, userPhone, userName);
+                        };
 
                         eventSource.onmessage = (e) => {
                             const msg = JSON.parse(e.data);
                             if (msg.role === 'status') {
                                 eventSource.close();
                                 clearTimeout(emergencyTimeout);
-                                finishCall(msg.content, date, time, people, userPhone, userName);
+                                safeFinish(msg.content);
                             } else if (msg.role === 'agent') {
                                 addLog(msg.content, 'agent');
                             } else if (msg.role === 'restaurant') {
-                                addLog(msg.content, 'restaurant'); // Styles the restaurant text correctly
+                                addLog(msg.content, 'restaurant');
                             } else if (msg.role === 'system') {
                                 addLog(msg.content, 'system');
                             }
@@ -500,14 +506,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         eventSource.onerror = () => {
                             eventSource.close();
                             clearTimeout(emergencyTimeout);
-                            finishCall('failed', date, time, people, userPhone, userName);
+                            safeFinish('failed');
                         };
 
-                        // Absolute fallback if the AI somehow gets stuck in an infinite loop
+                        // Absolute fallback if the SSE never sends a status (e.g. server crash)
+                        // Default to FAILED — never assume success without a confirmation from the server
                         emergencyTimeout = setTimeout(() => {
                             eventSource.close();
-                            finishCall('success', date, time, people, userPhone, userName);
-                        }, 60000); // 60s maximum duration
+                            safeFinish('failed'); // ← was incorrectly 'success' before
+                        }, 90000); // 90s maximum duration
 
                     } else {
                         addLog(`${translateStr('error-prefix')} ${data.error}`, 'error');
