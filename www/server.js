@@ -788,20 +788,26 @@ app.post('/twilio/call-status', async (req, res) => {
 
             // Gemini evaluates outcome AND extracts alternatives
             const evalPrompt = `
-                You are evaluating a phone call where an AI assistant tried to book a restaurant reservation at ${callState.rawTime}.
+                You are evaluating a phone call where an AI assistant tried to book a restaurant reservation at ${callState.rawTime} on ${callState.rawDate}.
                 
                 CONVERSATION:
                 ${conversation}
                 
+                Your task: determine whether the reservation was ACTUALLY CONFIRMED for the ORIGINALLY requested time (${callState.rawTime}).
+                
+                CRITICAL RULES — read carefully:
+                - Set "success": TRUE only if the restaurant explicitly said it is CONFIRMED/BOOKED for a specific time AND the agent accepted.
+                - Set "success": FALSE if the restaurant said they are full, no availability, or proposed ANY different time (e.g. "11am", "2pm") WITHOUT the agent explicitly saying "yes, I'll book that" or "confirmed".
+                - Set "success": FALSE if the agent said they need to "check with the client" or ended the call without a firm booking.
+                - If the restaurant proposed alternative times but NO booking was confirmed, set "alternatives" to those proposed times (e.g. "11:00 AM" or "14:00").
+                
                 Answer with ONLY a JSON object (no markdown, no explanation):
                 {
                   "success": true or false,
-                  "confirmedTime": "string of the final confirmed time if it was successfully booked (e.g. '19:30'), or null",
-                  "alternatives": "string describing any alternative times/dates the restaurant mentioned, or null if none",
+                  "confirmedTime": "the actual confirmed time string if success=true, otherwise null",
+                  "alternatives": "string describing the alternative times the restaurant offered, or null if none were offered",
                   "notes": "one sentence summary of what happened"
                 }
-                
-                Set "success": true ONLY if the restaurant explicitly confirmed the booking.
             `;
 
             const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
