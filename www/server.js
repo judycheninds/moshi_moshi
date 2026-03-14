@@ -499,23 +499,23 @@ app.post('/twilio/voice', (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW'; // Specific STT for Taiwan
-        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Google Wavenet for Taiwan
+        twilioVoice = 'Google.cmn-TW-Neural2-A'; // Google Neural2 — more natural than Wavenet
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Google.cmn-CN-Wavenet-D'; // Google Wavenet for Mainland China
+        twilioVoice = 'Google.cmn-CN-Neural2-D'; // Google Neural2 CN
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Polly.Kazuha-Neural'; // Amazon Polly Neural
+        twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese — more natural
     } else if (targetLang.startsWith('ko')) {
         sayLang = 'ko-KR';
         gatherLang = 'ko-KR';
-        twilioVoice = 'Polly.Seoyeon-Neural'; // Amazon Polly Neural
+        twilioVoice = 'Polly.Seoyeon-Neural'; // Amazon Polly Neural Korean
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Salli-Neural'; // Amazon Polly Neural
+        twilioVoice = 'Polly.Danielle-Generative'; // Amazon Polly GENERATIVE — most human-sounding
     }
 
     // The initial thing the AI says to start the conversation — warm, human, personal
@@ -570,23 +570,23 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'cmn-Hant-TW';
-        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Google Wavenet for Taiwan
+        twilioVoice = 'Google.cmn-TW-Neural2-A'; // Google Neural2 TW
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Google.cmn-CN-Wavenet-D'; // Google Wavenet for Mainland China
+        twilioVoice = 'Google.cmn-CN-Neural2-D'; // Google Neural2 CN
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Polly.Kazuha-Neural'; // Amazon Polly Neural
+        twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese
     } else if (targetLang.startsWith('ko')) {
         sayLang = 'ko-KR';
         gatherLang = 'ko-KR';
-        twilioVoice = 'Polly.Seoyeon-Neural'; // Amazon Polly Neural
+        twilioVoice = 'Polly.Seoyeon-Neural';
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Salli-Neural'; // Amazon Polly Neural
+        twilioVoice = 'Polly.Danielle-Generative'; // Most human-sounding English voice
     }
 
     const langNames = {
@@ -618,18 +618,19 @@ app.post('/twilio/gather-result', async (req, res) => {
             "${transcribedText}"
 
             [HOW TO RESPOND — READ CAREFULLY]
-            1. Respond warmly and naturally, exactly as a real human assistant would on the phone. You are calling on behalf of ${callState.userName}.
-            2. Use natural conversational phrases. In English, use things like "Of course!", "Let me check...". If speaking in Chinese, you MUST use native, conversational idioms like "好的没问题" (Okay, no problem), "稍等一下我看看" (Let me check), "好的太感谢了" (Okay, thank you so much), instead of awkward literal translations of English idioms. Do not be overly formal or robotic.
-            3. NEVER start sentences with filler words like "Oh", "Um", or "Ah" (e.g., do not say "Oh, okay" or "Oh, I see"). Be direct and precise in your conversation.
-            4. When confirming the reservation details (date, time, party size, name), do it clearly but warmly. For example: "It would be for ${callState.userName}, party of X, on [date] at [time]."
-            5. If they ask for a contact name, say the reservation is under the name "${callState.userName}".
-            6. If they ask for a callback number, give them: "${callState.userPhone}".
-            7. If the requested time is unavailable, politely ask what other times are available. DO NOT confirm a different time unless it was explicitly provided in your instructions as an acceptable alternative from the user. If they propose a different time/day that was not approved, politely say you need to check with your client and end the call smoothly.
-            8. Once the reservation is fully confirmed (either original or approved alternative time), warmly thank them and say a natural goodbye.
-            9. CRITICAL: Output ONLY the raw spoken text — no quotes, no stage directions, no emojis, no markdown. Just the words to speak.
-            10. CRITICAL: You MUST speak exclusively in ${langName} for this entire turn. BCP-47: '${targetLang}'. Do NOT mix languages or include translations.
-            11. If the restaurant has an automated system (IVR) that asks you to press a number (e.g., "Press 1 to speak to a representative"), you MUST output the exact command [PRESS:X] where X is the number to press. For example, output [PRESS:1] to press 1. You can still speak normally before or after the command if needed.
-            12. Keep your response concise — this is a phone call, not an essay. Speak naturally and don't ramble.
+            1. You are a real human assistant on a phone call. Sound warm, natural, and conversational — not like a robot or automated system.
+            2. Use natural speech rhythm: add short pauses (commas), contractions, and natural connectors. For example in English: "Sure, let me check on that..." not "I will check on that." In Chinese: use 嗯、那、好的、稍等 naturally.
+            3. Vary your sentence length. Mix short punchy replies with slightly longer ones. Never speak in perfect monotone sentences.
+            4. NEVER start sentences with "Oh", "Um", or "Ah". Instead, start with action: "Sure!", "Absolutely", "Of course", "Let me check" — or in Chinese: "好的", "沒問題", "稍等一下", "當然".
+            5. When confirming details, speak naturally like a real person: "So that'll be for ${callState.userName}, party of X, on [date] at [time] — does that sound right?"
+            6. If they ask for a contact name, say the reservation is under "${callState.userName}".
+            7. If they ask for a callback number, give them: "${callState.userPhone}".
+            8. If the requested time is unavailable, politely ask what other times are available. DO NOT confirm a different time unless it was explicitly provided in your instructions as an acceptable alternative. If they propose a different time that was not approved, say you need to check with your client and end the call smoothly.
+            9. Once the reservation is fully confirmed, warmly thank them and say a natural goodbye, like a real person would.
+            10. CRITICAL: Output ONLY raw spoken words — no quotes, no stage directions, no emojis, no markdown, no labels. Just words.
+            11. CRITICAL: Speak EXCLUSIVELY in ${langName} (BCP-47: '${targetLang}'). Do NOT mix languages.
+            12. If there is an automated phone system (IVR) asking you to press a number, output [PRESS:X] where X is the digit.
+            13. Keep it SHORT. This is a phone call. 1-3 sentences max per turn. Do not ramble.
         `;
 
         try {
