@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const rateLimit = require('express-rate-limit');
-
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 // Initialize Supabase (persistent DB)
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 console.log('✅ Supabase connected:', process.env.SUPABASE_URL);
@@ -149,13 +149,27 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const id = `user_${Date.now()}`;
+
+    // Create a Stripe Customer right away so we can store cards against them
+    let stripeCustomerId = null;
+    try {
+        const customer = await stripe.customers.create({
+            email: email.toLowerCase(),
+            name: name,
+            metadata: { app_user_id: id }
+        });
+        stripeCustomerId = customer.id;
+    } catch (err) {
+        console.error("Warning: Stripe Customer creation failed:", err.message);
+    }
+
     const { error } = await supabase.from('users').insert({
-        id, email: email.toLowerCase(), password_hash: passwordHash, name, phone: phone || ''
+        id, email: email.toLowerCase(), password_hash: passwordHash, name, phone: phone || '', stripe_customer_id: stripeCustomerId
     });
     if (error) return res.status(500).json({ error: error.message });
 
     const token = jwt.sign({ id, email: email.toLowerCase(), name }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ success: true, token, user: { id, email: email.toLowerCase(), name, phone: phone || '' } });
+    res.json({ success: true, token, user: { id, email: email.toLowerCase(), name, phone: phone || '', stripeCustomerId } });
 });
 
 // POST /api/auth/login
@@ -188,6 +202,27 @@ app.patch('/api/auth/profile', authMiddleware, async (req, res) => {
     const { data, error } = await supabase.from('users').update(updates).eq('id', req.user.id).select('id,email,name,phone').single();
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, user: data });
+});
+
+// POST /api/create-setup-intent
+app.post('/api/create-setup-intent', authMiddleware, async (req, res) => {
+    try {
+        // Find the matching Stripe Customer ID we saved during registration
+        const { data: user, error } = await supabase.from('users').select('stripe_customer_id').eq('id', req.user.id).single();
+        if (error || !user?.stripe_customer_id) {
+            return res.status(400).json({ error: 'Stripe Customer not found for this user.' });
+        }
+
+        const setupIntent = await stripe.setupIntents.create({
+            customer: user.stripe_customer_id,
+            payment_method_types: ['card'],
+        });
+
+        res.json({ clientSecret: setupIntent.client_secret });
+    } catch (error) {
+        console.error('Error creating SetupIntent:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // GET /api/reservations
@@ -1067,10 +1102,52 @@ app.post('/twilio/call-status', async (req, res) => {
                 }).eq('id', callState.scheduledCallId);
             }
 
+            // Trigger Stripe Payment Charge if Successful! (Assuming $5 fee)
+            let paymentStatusMsg = "";
+            let paymentSucceeded = false;
+            if (isSuccess && callState.userId) {
+                try {
+                    const { data: user, error } = await supabase.from('users').select('stripe_customer_id').eq('id', callState.userId).single();
+                    if (user && user.stripe_customer_id) {
+
+                        // Look for their default payment method
+                        const paymentMethods = await stripe.paymentMethods.list({
+                            customer: user.stripe_customer_id,
+                            type: 'card',
+                        });
+
+                        if (paymentMethods.data.length > 0) {
+                            const paymentIntent = await stripe.paymentIntents.create({
+                                amount: 500, // $5.00
+                                currency: 'usd',
+                                customer: user.stripe_customer_id,
+                                payment_method: paymentMethods.data[0].id,
+                                off_session: true,
+                                confirm: true,
+                                description: `Reservation Fee for ${callState.restaurantPhone} on ${callState.rawDate}`
+                            });
+
+                            if (paymentIntent.status === 'succeeded') {
+                                paymentSucceeded = true;
+                                paymentStatusMsg = "The $5 service fee has been successfully charged.";
+                                // Update DB reservation flag as paid
+                                await supabase.from('reservations').update({ payment_status: 'paid' }).eq('call_sid', callSid);
+                            }
+                        } else {
+                            paymentStatusMsg = "No card on file to charge the $5 fee.";
+                        }
+                    }
+                } catch (err) {
+                    console.error("Stripe Charge Error:", err);
+                    paymentStatusMsg = "We couldn't process the $5 service fee but your reservation is still confirmed.";
+                }
+            }
+
             // SMS the user with the outcome
             if (isSuccess) {
-                await sendStatusSMS(callState.userPhone,
-                    `✅ Reservation confirmed! Table for ${callState.rawPeople} on ${callState.rawDate} at ${callState.rawTime} under "${callState.userName}".`);
+                let textMsg = `✅ Reservation confirmed! Table for ${callState.rawPeople} on ${callState.rawDate} at ${callState.rawTime} under "${callState.userName}".`;
+                if (paymentStatusMsg) textMsg += `\n${paymentStatusMsg}`;
+                await sendStatusSMS(callState.userPhone, textMsg);
             } else if (evalResult.alternatives) {
                 await sendStatusSMS(callState.userPhone,
                     `❌ Your requested time wasn't available. The restaurant offered: ${evalResult.alternatives}. Reply to rebook!`);

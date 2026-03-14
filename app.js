@@ -9,6 +9,35 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ---- Stripe Initialization ----
+    const stripe = Stripe('pk_live_51TAvUZBzAI7yOSyWs9cBhfC3KHVx4QGp7FKwarL3QTrkkAGAPHsvuGC4OqD16rwjtXUOEipa2tPN4PWLfiKDksWj00oO50l58h');
+    const elements = stripe.elements();
+    const cardElement = elements.create('card', {
+        style: {
+            base: {
+                color: '#fff',
+                fontFamily: 'Outfit, sans-serif',
+                fontSmoothing: 'antialiased',
+                fontSize: '16px',
+                '::placeholder': { color: 'rgba(255,255,255,0.6)' }
+            },
+            invalid: { color: '#fa755a', iconColor: '#fa755a' }
+        }
+    });
+
+    // Mount when ready
+    setTimeout(() => {
+        const ce = document.getElementById('card-element');
+        if (ce) {
+            cardElement.mount('#card-element');
+            cardElement.on('change', (event) => {
+                const displayError = document.getElementById('card-errors');
+                if (event.error) displayError.textContent = event.error.message;
+                else displayError.textContent = '';
+            });
+        }
+    }, 100);
+
     // ---- Navbar elements ----
     const navbar = document.getElementById('navbar');
     const loginBtn = document.getElementById('loginBtn');
@@ -257,6 +286,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await res.json();
                 if (!res.ok) { showModalError(data.error || 'Registration failed.'); modalSubmitBtn.disabled = false; modalSubmitBtn.innerHTML = originalText; return; }
+
+                try {
+                    const setupRes = await fetch(`${API}/api/create-setup-intent`, {
+                        method: 'POST', headers: { 'Authorization': `Bearer ${data.token}` }
+                    });
+                    const setupData = await setupRes.json();
+                    if (!setupRes.ok) throw new Error(setupData.error || 'Failed to initialize payment setup');
+
+                    const { error, setupIntent } = await stripe.confirmCardSetup(setupData.clientSecret, {
+                        payment_method: {
+                            card: cardElement,
+                            billing_details: { name: name, email: email }
+                        }
+                    });
+
+                    if (error) {
+                        showModalError('Card verification failed: ' + error.message);
+                        modalSubmitBtn.disabled = false; modalSubmitBtn.innerHTML = originalText; return;
+                    }
+                    console.log('✅ Card saved securely with SetupIntent:', setupIntent.id);
+                } catch (stripeErr) {
+                    console.error('Stripe error:', stripeErr);
+                    showModalError('Payment setup failed. Please contact support.');
+                    modalSubmitBtn.disabled = false; modalSubmitBtn.innerHTML = originalText; return;
+                }
+
                 setAuth(data.token, data.user);
             } else {
                 const res = await fetch(`${API}/api/auth/login`, {
