@@ -628,7 +628,7 @@ app.post('/twilio/gather-result', async (req, res) => {
             8. If the requested time is unavailable, politely ask what other times are available. DO NOT confirm a different time unless it was explicitly provided in your instructions as an acceptable alternative. If they propose a different time that was not approved, say you need to check with your client and end the call smoothly.
             9. Once the reservation is fully confirmed, warmly thank them and say a natural goodbye, like a real person would.
             10. CRITICAL: Output ONLY raw spoken words — no quotes, no stage directions, no emojis, no markdown, no labels. Just words.
-            11. CRITICAL: Speak EXCLUSIVELY in ${langName} (BCP-47: '${targetLang}'). Do NOT mix languages.
+            11. CRITICAL: Speak EXCLUSIVELY in ${langName} (BCP-47: '${targetLang}') for EVERY single sentence, including greetings, confirmations, and goodbyes. NEVER switch to English or any other language at any point, even at the end of the call. If you naturally want to say "Thank you, goodbye!" — say it in ${langName} only.
             12. If there is an automated phone system (IVR) asking you to press a number, output [PRESS:X] where X is the digit.
             13. Keep it SHORT. This is a phone call. 1-3 sentences max per turn. Do not ramble.
         `;
