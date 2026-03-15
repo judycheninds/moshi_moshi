@@ -1493,6 +1493,14 @@ footer {
     color: var(--text-muted);
 }
 
+.crm-res-notes {
+    font-size: 0.8rem;
+    color: rgba(255, 100, 100, 0.75);
+    margin-top: 0.4rem;
+    font-style: italic;
+    padding-left: 2px;
+}
+
 .crm-empty,
 .crm-loading {
     text-align: center;

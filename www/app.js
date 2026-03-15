@@ -366,100 +366,129 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboard.classList.remove('hidden');
 
         // Load profile header
-        document.getElementById('crm-name').textContent = currentUser.name;
-        document.getElementById('crm-email').textContent = currentUser.email;
-        document.getElementById('crm-phone').textContent = currentUser.phone || '—';
+        document.getElementById('crm-name').textContent  = currentUser.name;
+        document.getElementById('crm-email').innerHTML   = `<i class="fa-solid fa-envelope"></i> ${currentUser.email}`;
+        document.getElementById('crm-phone').innerHTML   = `<i class="fa-solid fa-phone"></i> ${currentUser.phone || '—'}`;
 
         // Load profile tab inputs
-        document.getElementById('crm-edit-name').value = currentUser.name;
+        document.getElementById('crm-edit-name').value  = currentUser.name;
         document.getElementById('crm-edit-email').value = currentUser.email;
         document.getElementById('crm-edit-phone').value = currentUser.phone || '';
 
-        // Tab Switching Logic
-        const tabs = document.querySelectorAll('.crm-tab');
-        const panes = document.querySelectorAll('.crm-tab-pane');
+        // ── Tab Switching ───────────────────────────────────────────────
+        // Use event delegation on the tab container to avoid stale-reference bugs
+        const tabContainer = dashboard.querySelector('.crm-tabs');
+        if (tabContainer && !tabContainer._crmTabsReady) {
+            tabContainer._crmTabsReady = true;
+            tabContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('.crm-tab');
+                if (!btn) return;
+                const targetName = btn.dataset.tab;
 
-        tabs.forEach(tab => {
-            // Remove old listeners to prevent duplicates
-            const newTab = tab.cloneNode(true);
-            tab.parentNode.replaceChild(newTab, tab);
-
-            newTab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                panes.forEach(p => p.classList.add('hidden'));
-                p.classList.remove('active'); // Wait, the pane doesn't use active block, just hidden
-
-                // Fix:
-                document.querySelectorAll('.crm-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.crm-tab-pane').forEach(p => {
-                    p.classList.add('hidden');
-                    p.classList.remove('active');
+                // Toggle tab active state
+                dashboard.querySelectorAll('.crm-tab').forEach(t => t.classList.toggle('active', t === btn));
+                // Toggle pane visibility
+                dashboard.querySelectorAll('.crm-tab-pane').forEach(p => {
+                    const show = p.id === `crm-tab-${targetName}`;
+                    p.classList.toggle('hidden', !show);
+                    p.classList.toggle('active',  show);
                 });
 
-                newTab.classList.add('active');
-                const targetPane = document.getElementById(`crm-tab-${newTab.dataset.tab}`);
-                if (targetPane) {
-                    targetPane.classList.remove('hidden');
-                    targetPane.classList.add('active');
-                }
+                // Lazy load content on first switch to each tab
+                if (targetName === 'history')  loadHistory();
+                if (targetName === 'billing')  loadBilling();
             });
+        }
+
+        // Open to History tab by default
+        dashboard.querySelectorAll('.crm-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'history'));
+        dashboard.querySelectorAll('.crm-tab-pane').forEach(p => {
+            const show = p.id === 'crm-tab-history';
+            p.classList.toggle('hidden', !show);
+            p.classList.toggle('active', show);
         });
 
-        // Ensure history tab is default active on open
-        document.querySelector('.crm-tab[data-tab="history"]')?.click();
+        // ── Load Reservation History ─────────────────────────────────────
+        async function loadHistory() {
+            const historyEl = document.getElementById('crm-history');
+            if (!historyEl || historyEl._loaded) return;
 
-        // Load Reservation History
-        const historyEl = document.getElementById('crm-history');
-        historyEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading history...</div>';
-        try {
-            const res = await fetch(`${API}/api/reservations`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-            const reservations = await res.json();
-            if (!reservations || !reservations.length) {
-                historyEl.innerHTML = '<div class="crm-empty"><i class="fa-solid fa-calendar-xmark"></i><p>No reservations yet.</p></div>';
-            } else {
-                historyEl.innerHTML = reservations.map(r => {
-                    const dateStr = r.date ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-                    return `
+            historyEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading history...</div>';
+            try {
+                const res = await fetch(`${API}/api/reservations`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+                const reservations = await res.json();
+
+                if (!reservations || !reservations.length) {
+                    historyEl.innerHTML = '<div class="crm-empty"><i class="fa-solid fa-calendar-xmark"></i><p>No reservations yet.</p></div>';
+                } else {
+                    historyEl.innerHTML = reservations.map(r => {
+                        const dateStr = r.date
+                            ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : '—';
+                        const status = (r.status || 'unknown').toLowerCase();
+                        const statusIcon  = status === 'confirmed' ? 'fa-circle-check'
+                                         : status === 'failed'    ? 'fa-circle-xmark'
+                                         : 'fa-calendar-day';
+                        const statusLabel = status === 'confirmed' ? 'Confirmed'
+                                          : status === 'failed'    ? 'Failed'
+                                          : status.charAt(0).toUpperCase() + status.slice(1);
+                        return `
                         <div class="crm-res-card">
-                            <div class="crm-res-status ${r.status}"><i class="fa-solid fa-circle-check"></i> ${r.status}</div>
+                            <div class="crm-res-status ${status}">
+                                <i class="fa-solid ${statusIcon}"></i> ${statusLabel}
+                            </div>
                             <div class="crm-res-main">
                                 <span class="crm-res-date"><i class="fa-regular fa-calendar"></i> ${dateStr} at ${r.time || '—'}</span>
-                                <span class="crm-res-people"><i class="fa-solid fa-users"></i> ${r.people} guests</span>
-                                <span class="crm-res-name"><i class="fa-solid fa-user"></i> ${r.guestName}</span>
+                                <span class="crm-res-people"><i class="fa-solid fa-users"></i> ${r.people || '—'} guests</span>
+                                <span class="crm-res-name"><i class="fa-solid fa-user"></i> ${r.guestName || '—'}</span>
                             </div>
                             <div class="crm-res-phone"><i class="fa-solid fa-phone"></i> ${r.restaurantPhone || '—'}</div>
+                            ${r.notes ? `<div class="crm-res-notes">${r.notes}</div>` : ''}
                         </div>`;
-                }).join('');
+                    }).join('');
+                    historyEl._loaded = true;
+                }
+            } catch (e) {
+                console.error('History load error:', e);
+                historyEl.innerHTML = '<div class="crm-empty">Could not load history.</div>';
             }
-        } catch (e) {
-            historyEl.innerHTML = '<div class="crm-empty">Could not load history.</div>';
         }
 
-        // Load Billing Info
-        const billingEl = document.getElementById('crm-billing-info');
-        billingEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading billing...</div>';
-        try {
-            const res = await fetch(`${API}/api/user/billing`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-            const data = await res.json();
-            if (!data.paymentMethods || !data.paymentMethods.length) {
-                billingEl.innerHTML = '<div class="crm-empty"><i class="fa-solid fa-credit-card"></i><p>No payment methods on file.</p></div>';
-            } else {
-                billingEl.innerHTML = data.paymentMethods.map(card => `
-                    <div class="crm-res-card" style="display: flex; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <i class="fa-brands fa-cc-${card.brand.toLowerCase()}" style="font-size: 2rem; color: #fff;"></i>
-                            <div>
-                                <div style="font-weight: 600; color: #fff;">•••• •••• •••• ${card.last4}</div>
-                                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Expires ${String(card.exp_month).padStart(2, '0')}/${card.exp_year}</div>
+        // ── Load Billing Info ────────────────────────────────────────────
+        async function loadBilling() {
+            const billingEl = document.getElementById('crm-billing-info');
+            if (!billingEl || billingEl._loaded) return;
+
+            billingEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading billing...</div>';
+            try {
+                const res = await fetch(`${API}/api/user/billing`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+                const data = await res.json();
+
+                if (!data.paymentMethods || !data.paymentMethods.length) {
+                    billingEl.innerHTML = '<div class="crm-empty"><i class="fa-solid fa-credit-card"></i><p>No payment methods on file.</p></div>';
+                } else {
+                    billingEl.innerHTML = data.paymentMethods.map(card => `
+                        <div class="crm-res-card" style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+                            <div style="display:flex; align-items:center; gap:1rem;">
+                                <i class="fa-brands fa-cc-${(card.brand || 'visa').toLowerCase()}" style="font-size:2rem; color:#fff;"></i>
+                                <div>
+                                    <div style="font-weight:600; color:#fff;">•••• •••• •••• ${card.last4}</div>
+                                    <div style="font-size:0.85rem; color:rgba(255,255,255,0.6);">Expires ${String(card.exp_month).padStart(2,'0')}/${card.exp_year}</div>
+                                </div>
                             </div>
+                            <div class="crm-res-status confirmed" style="margin:0;"><i class="fa-solid fa-check"></i> Default</div>
                         </div>
-                        <div class="crm-res-status confirmed" style="margin:0;"><i class="fa-solid fa-check"></i> Default</div>
-                    </div>
-                `).join('');
+                    `).join('');
+                    billingEl._loaded = true;
+                }
+            } catch (e) {
+                console.error('Billing load error:', e);
+                billingEl.innerHTML = '<div class="crm-empty">Could not load billing info.</div>';
             }
-        } catch (e) {
-            billingEl.innerHTML = '<div class="crm-empty">Could not load billing info.</div>';
         }
+
+        // Auto-load history on open
+        loadHistory();
     }
 
     document.getElementById('crmCloseBtn')?.addEventListener('click', () => document.getElementById('crmDashboard').classList.add('hidden'));
