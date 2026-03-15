@@ -29,15 +29,19 @@ const globalLimiter = rateLimit({
     message: { error: 'Too many requests, please slow down.' }
 });
 
+// Helper: normalise IPv6-mapped IPv4 addresses to plain IPv4 for rate-limit keys
+const normaliseIp = (ip = '') => ip.replace(/^::ffff:/, '');
+
 // Strict: max 5 real calls per hour per IP (Twilio costs money!)
 const callLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,  // 1 hour
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { xForwardedForHeader: false },   // trust Render's proxy
     message: { error: 'Call limit reached. You can make up to 5 reservation calls per hour.' },
     keyGenerator: (req) => {
-        // Rate-limit by authenticated user ID if available, else by IP
+        // Rate-limit by authenticated user ID if available, else by normalised IP
         try {
             const authHeader = req.headers['authorization'];
             if (authHeader?.startsWith('Bearer ')) {
@@ -45,7 +49,7 @@ const callLimiter = rateLimit({
                 return `user_${decoded.id}`;
             }
         } catch (e) { /* use IP */ }
-        return req.ip;
+        return normaliseIp(req.ip);
     }
 });
 
