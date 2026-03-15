@@ -112,8 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('mm_token', token);
         localStorage.setItem('mm_user', JSON.stringify(user));
         loginBtn.innerHTML = `<span>${user.name}</span> <i class="fa-solid fa-user"></i>`;
-        document.getElementById('loginPromptContainer')?.classList.add('hidden');
-        document.getElementById('reservationFormContainer')?.classList.remove('hidden');
     }
 
     function clearAuth() {
@@ -122,13 +120,15 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('mm_token');
         localStorage.removeItem('mm_user');
         loginBtn.innerHTML = `<span data-i18n="nav-login">Login / Sign Up</span> <i class="fa-solid fa-arrow-right-to-bracket"></i>`;
-        document.getElementById('loginPromptContainer')?.classList.remove('hidden');
-        document.getElementById('reservationFormContainer')?.classList.add('hidden');
         // Clear pre-filled fields
         const nameEl = document.getElementById('userName');
         const phoneEl = document.getElementById('userPhone');
         if (nameEl) nameEl.value = '';
         if (phoneEl) phoneEl.value = '';
+        // Redirect to landing page since user is no longer authenticated
+        if (window.location.pathname.includes('call.html')) {
+            window.location.href = 'index.html';
+        }
     }
 
     // Fill reservation form with user info + gold flash animation
@@ -150,48 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (authToken && currentUser) {
         loginBtn.innerHTML = `<span>${currentUser.name}</span> <i class="fa-solid fa-user"></i>`;
         fillUserForm(currentUser);
-        document.getElementById('loginPromptContainer')?.classList.add('hidden');
-        document.getElementById('reservationFormContainer')?.classList.remove('hidden');
     }
 
-    // Initialize Call Page Routing
-    const showCallPage = () => {
-        document.querySelector('.hero')?.classList.add('hidden');
-        document.getElementById('how-it-works')?.classList.add('hidden');
-        const resSection = document.getElementById('reservation');
-        if (resSection) {
-            resSection.classList.remove('hidden');
-            resSection.scrollIntoView({ behavior: 'smooth' });
-        }
-    };
-
-    const showLandingPage = () => {
-        document.querySelector('.hero')?.classList.remove('hidden');
-        document.getElementById('how-it-works')?.classList.remove('hidden');
-        document.getElementById('reservation')?.classList.add('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    document.getElementById('heroStartBtn')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (!authToken || !currentUser) {
-            loginModal.classList.remove('hidden');
-            window._pendingCallPage = true; // Mark intent so we can auto-forward on successful login
-        } else {
-            showCallPage();
-        }
-    });
-
-    document.getElementById('navLogoBtn')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        showLandingPage();
-    });
-
-    // Set up new login prompt button inside the call page (if accessed without hero CTA)
-    document.getElementById('loginPromptBtn')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('loginModal').classList.remove('hidden');
-    });
 
 
     // ---- Login Modal Logic ----
@@ -318,9 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Fill reservation form with user info after modal closes
             setTimeout(() => {
                 fillUserForm(currentUser);
-                if (window._pendingCallPage) {
-                    showCallPage();
-                    window._pendingCallPage = false;
+                // Redirect to call page after successful login
+                if (!window.location.pathname.includes('call.html')) {
+                    window.location.href = 'call.html';
                 }
             }, 300);
         } catch (err) {
@@ -473,273 +433,273 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- Form Submission & AI Agent Simulation ----
     const form = document.getElementById('reservationForm');
-    const callBtn = document.getElementById('callBtn');
-    const btnText = callBtn.querySelector('.btn-text');
-    const btnLoader = callBtn.querySelector('.btn-loader');
+    if (form) { // Only run on call.html where the form exists
+        const callBtn = document.getElementById('callBtn');
+        const btnText = callBtn.querySelector('.btn-text');
+        const btnLoader = callBtn.querySelector('.btn-loader');
 
-    const agentContainer = document.querySelector('.agent-avatar-container');
-    const agentStatusText = document.getElementById('agentStatusText');
-    const callLogContainer = document.getElementById('callLog');
+        const agentContainer = document.querySelector('.agent-avatar-container');
+        const agentStatusText = document.getElementById('agentStatusText');
+        const callLogContainer = document.getElementById('callLog');
 
-    const resultCard = document.getElementById('resultCard');
-    const resultTitle = document.getElementById('resultTitle');
-    const resultDesc = document.getElementById('resultDesc');
-    const resultIcon = resultCard.querySelector('.result-icon');
-    const resetBtn = document.getElementById('resetBtn');
+        const resultCard = document.getElementById('resultCard');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultDesc = document.getElementById('resultDesc');
+        const resultIcon = resultCard.querySelector('.result-icon');
+        const resetBtn = document.getElementById('resetBtn');
 
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
 
-        // --- Enforce Login Before Calling ---
-        if (!authToken || !currentUser) {
-            loginModal.classList.remove('hidden');
-            showModalError('Please sign in to make a reservation.');
-            return;
-        }
-
-        startCallSimulation();
-    });
-
-    resetBtn.addEventListener('click', () => {
-        resultCard.classList.add('hidden');
-        agentStatusText.textContent = translateStr('agent-status-default');
-        agentContainer.classList.remove('calling');
-        callLogContainer.innerHTML = `<div class="log-entry system">${translateStr('call-log-default')}</div>`;
-
-        // Reset form
-        btnText.textContent = translateStr('btn-call');
-        callBtn.disabled = false;
-        callBtn.style.opacity = '1';
-        btnLoader.classList.add('hidden');
-        btnText.classList.remove('hidden');
-        form.reset();
-        dateInput.value = today;
-    });
-
-    document.getElementById('rebookBtn')?.addEventListener('click', () => {
-        resultCard.classList.add('hidden');
-        // Try to extract and auto-fill the proposed alternative time into the select dropdowns
-        const altOfferText = document.getElementById('altOfferText');
-        let acceptedTime = null;
-        if (altOfferText) {
-            const altText = altOfferText.textContent || '';
-            const timeMatch = altText.match(/\b(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
-            if (timeMatch) {
-                let hours = parseInt(timeMatch[1]);
-                const mins = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
-                const meridian = (timeMatch[3] || '').toLowerCase();
-                if (meridian === 'pm' && hours < 12) hours += 12;
-                if (meridian === 'am' && hours === 12) hours = 0;
-                // Snap minutes to nearest 15
-                const snappedMins = [0, 15, 30, 45].reduce((prev, curr) =>
-                    Math.abs(curr - mins) < Math.abs(prev - mins) ? curr : prev, 0);
-                const paddedH = String(hours).padStart(2, '0');
-                const paddedM = String(snappedMins).padStart(2, '0');
-                acceptedTime = `${paddedH}:${paddedM}`;
-                // Set the select dropdowns
-                const hourSel = document.getElementById('timeHour');
-                const minSel = document.getElementById('timeMin');
-                const hiddenTime = document.getElementById('time');
-                if (hourSel) hourSel.value = paddedH;
-                if (minSel) minSel.value = paddedM;
-                if (hiddenTime) {
-                    hiddenTime.value = acceptedTime;
-                    hiddenTime.classList.add('autofill-flash');
-                    setTimeout(() => hiddenTime.classList.remove('autofill-flash'), 2000);
-                }
-                if (hourSel) {
-                    hourSel.classList.add('autofill-flash');
-                    setTimeout(() => hourSel.classList.remove('autofill-flash'), 2000);
-                }
-                if (hourSel) hourSel.focus();
+            // Double-check: user must be logged in (call.html already gates this, but just in case)
+            if (!authToken || !currentUser) {
+                window.location.href = 'index.html';
+                return;
             }
+
+            startCallSimulation();
+        });
+
+        resetBtn.addEventListener('click', () => {
+            resultCard.classList.add('hidden');
+            agentStatusText.textContent = translateStr('agent-status-default');
+            agentContainer.classList.remove('calling');
+            callLogContainer.innerHTML = `<div class="log-entry system">${translateStr('call-log-default')}</div>`;
+
+            // Reset form
+            btnText.textContent = translateStr('btn-call');
+            callBtn.disabled = false;
+            callBtn.style.opacity = '1';
+            btnLoader.classList.add('hidden');
+            btnText.classList.remove('hidden');
+            form.reset();
+            dateInput.value = today;
+        });
+
+        document.getElementById('rebookBtn')?.addEventListener('click', () => {
+            resultCard.classList.add('hidden');
+            // Try to extract and auto-fill the proposed alternative time into the select dropdowns
+            const altOfferText = document.getElementById('altOfferText');
+            let acceptedTime = null;
+            if (altOfferText) {
+                const altText = altOfferText.textContent || '';
+                const timeMatch = altText.match(/\b(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
+                if (timeMatch) {
+                    let hours = parseInt(timeMatch[1]);
+                    const mins = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+                    const meridian = (timeMatch[3] || '').toLowerCase();
+                    if (meridian === 'pm' && hours < 12) hours += 12;
+                    if (meridian === 'am' && hours === 12) hours = 0;
+                    // Snap minutes to nearest 15
+                    const snappedMins = [0, 15, 30, 45].reduce((prev, curr) =>
+                        Math.abs(curr - mins) < Math.abs(prev - mins) ? curr : prev, 0);
+                    const paddedH = String(hours).padStart(2, '0');
+                    const paddedM = String(snappedMins).padStart(2, '0');
+                    acceptedTime = `${paddedH}:${paddedM}`;
+                    // Set the select dropdowns
+                    const hourSel = document.getElementById('timeHour');
+                    const minSel = document.getElementById('timeMin');
+                    const hiddenTime = document.getElementById('time');
+                    if (hourSel) hourSel.value = paddedH;
+                    if (minSel) minSel.value = paddedM;
+                    if (hiddenTime) {
+                        hiddenTime.value = acceptedTime;
+                        hiddenTime.classList.add('autofill-flash');
+                        setTimeout(() => hiddenTime.classList.remove('autofill-flash'), 2000);
+                    }
+                    if (hourSel) {
+                        hourSel.classList.add('autofill-flash');
+                        setTimeout(() => hourSel.classList.remove('autofill-flash'), 2000);
+                    }
+                    if (hourSel) hourSel.focus();
+                }
+            }
+
+            // Mark the next call as a rebook so the agent uses the callback greeting
+            window._isRebook = true;
+            window._acceptedAltTime = acceptedTime || altOfferText?.textContent?.trim() || null;
+
+            // Restore button state
+            btnText.textContent = translateStr('btn-call');
+            callBtn.disabled = false;
+            callBtn.style.opacity = '1';
+            btnLoader.classList.add('hidden');
+            btnText.classList.remove('hidden');
+        });
+
+
+        function addLog(text, type) {
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+
+            // Add timestamp
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+            div.textContent = `[${timeStr}] ${text}`;
+            callLogContainer.appendChild(div);
+            callLogContainer.scrollTop = callLogContainer.scrollHeight;
         }
 
-        // Mark the next call as a rebook so the agent uses the callback greeting
-        window._isRebook = true;
-        window._acceptedAltTime = acceptedTime || altOfferText?.textContent?.trim() || null;
+        async function startCallSimulation() {
+            // UI Changes Let's go!
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+            callBtn.disabled = true;
+            callBtn.style.opacity = '0.7';
 
-        // Restore button state
-        btnText.textContent = translateStr('btn-call');
-        callBtn.disabled = false;
-        callBtn.style.opacity = '1';
-        btnLoader.classList.add('hidden');
-        btnText.classList.remove('hidden');
-    });
+            const phone = document.getElementById('phone').value;
+            const userName = document.getElementById('userName').value;
+            const userPhone = document.getElementById('userPhone').value;
+            const date = document.getElementById('date').value;
+            const time = document.getElementById('time').value;
+            const altTime1 = document.getElementById('altTime1').value;
+            const altTime2 = document.getElementById('altTime2').value;
+            const people = document.getElementById('people').value;
 
+            callLogContainer.innerHTML = '';
+            addLog(translateStr('init-agent'), 'system');
 
-    function addLog(text, type) {
-        const div = document.createElement('div');
-        div.className = `log-entry ${type}`;
+            const agentLang = document.getElementById('agentLang')?.value || 'ja-JP';
+            const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, language: agentLang, uiLanguage: window.currentLang || 'en', isRebook: window._isRebook || false, acceptedAltTime: window._acceptedAltTime || null };
+            // Reset rebook flags after use
+            window._isRebook = false;
+            window._acceptedAltTime = null;
+            const authHeaders = { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) };
 
-        // Add timestamp
-        const now = new Date();
-        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            if (callMode === 'schedule') {
+                const scheduledAt = document.getElementById('scheduledAt')?.value;
+                if (!scheduledAt) {
+                    alert('Please pick a date and time to schedule the call.');
+                    btnLoader.classList.add('hidden');
+                    btnText.classList.remove('hidden');
+                    callBtn.disabled = false;
+                    return;
+                }
 
-        div.textContent = `[${timeStr}] ${text}`;
-        callLogContainer.appendChild(div);
-        callLogContainer.scrollTop = callLogContainer.scrollHeight;
-    }
+                agentStatusText.textContent = '📅 Scheduling call...';
 
-    async function startCallSimulation() {
-        // UI Changes Let's go!
-        btnText.classList.add('hidden');
-        btnLoader.classList.remove('hidden');
-        callBtn.disabled = true;
-        callBtn.style.opacity = '0.7';
-
-        const phone = document.getElementById('phone').value;
-        const userName = document.getElementById('userName').value;
-        const userPhone = document.getElementById('userPhone').value;
-        const date = document.getElementById('date').value;
-        const time = document.getElementById('time').value;
-        const altTime1 = document.getElementById('altTime1').value;
-        const altTime2 = document.getElementById('altTime2').value;
-        const people = document.getElementById('people').value;
-
-        callLogContainer.innerHTML = '';
-        addLog(translateStr('init-agent'), 'system');
-
-        const agentLang = document.getElementById('agentLang')?.value || 'ja-JP';
-        const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, language: agentLang, uiLanguage: window.currentLang || 'en', isRebook: window._isRebook || false, acceptedAltTime: window._acceptedAltTime || null };
-        // Reset rebook flags after use
-        window._isRebook = false;
-        window._acceptedAltTime = null;
-        const authHeaders = { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) };
-
-        if (callMode === 'schedule') {
-            const scheduledAt = document.getElementById('scheduledAt')?.value;
-            if (!scheduledAt) {
-                alert('Please pick a date and time to schedule the call.');
+                try {
+                    // Convert local time to UTC ISO string so server interprets it correctly
+                    const scheduledAtUTC = new Date(scheduledAt).toISOString();
+                    const res = await fetch(`${API}/api/schedule-call`, {
+                        method: 'POST', headers: authHeaders,
+                        body: JSON.stringify({ ...callPayload, scheduledAt: scheduledAtUTC })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        addLog(`✅ Call scheduled! ${data.message}`, 'system');
+                        addLog(`📅 The agent will call ${phone} at the scheduled time and retry up to 3 times if no answer.`, 'system');
+                        agentStatusText.textContent = '📅 Call Scheduled';
+                    } else {
+                        addLog(`❌ Failed to schedule: ${data.error}`, 'system');
+                        agentStatusText.textContent = 'Schedule Failed';
+                    }
+                } catch (err) {
+                    addLog(`❌ Network error: ${err.message}`, 'system');
+                }
                 btnLoader.classList.add('hidden');
                 btnText.classList.remove('hidden');
                 callBtn.disabled = false;
                 return;
-            }
+            } else {
+                // ── CALL NOW MODE ──────────────────────────────────────────────
+                agentContainer.classList.add('calling');
+                agentStatusText.textContent = `${translateStr('dialing')} ${phone}...`;
 
-            agentStatusText.textContent = '📅 Scheduling call...';
+                // Connect to our real Twilio + Gemini Node.js server!
+                fetch(`${API}/api/real-call`, {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify(callPayload)
+                }).then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            addLog(translateStr('real-call-initiated'), 'system');
+                            addLog(translateStr('twilio-call-sid') + ' ' + data.callSid, 'system');
+                            agentStatusText.textContent = translateStr('call-live');
 
-            try {
-                // Convert local time to UTC ISO string so server interprets it correctly
-                const scheduledAtUTC = new Date(scheduledAt).toISOString();
-                const res = await fetch(`${API}/api/schedule-call`, {
-                    method: 'POST', headers: authHeaders,
-                    body: JSON.stringify({ ...callPayload, scheduledAt: scheduledAtUTC })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    addLog(`✅ Call scheduled! ${data.message}`, 'system');
-                    addLog(`📅 The agent will call ${phone} at the scheduled time and retry up to 3 times if no answer.`, 'system');
-                    agentStatusText.textContent = '📅 Call Scheduled';
-                } else {
-                    addLog(`❌ Failed to schedule: ${data.error}`, 'system');
-                    agentStatusText.textContent = 'Schedule Failed';
-                }
-            } catch (err) {
-                addLog(`❌ Network error: ${err.message}`, 'system');
-            }
-            btnLoader.classList.add('hidden');
-            btnText.classList.remove('hidden');
-            callBtn.disabled = false;
-            return;
-        } else {
-            // ── CALL NOW MODE ──────────────────────────────────────────────
-            agentContainer.classList.add('calling');
-            agentStatusText.textContent = `${translateStr('dialing')} ${phone}...`;
+                            // Listen to the live conversation via SSE
+                            const eventSource = new EventSource(`https://moshi-moshi-8dh6.onrender.com/api/call-stream/${data.callSid}`);
+                            // Guard: prevent finishCall from running more than once per call
+                            let callFinished = false;
+                            const safeFinish = (status) => {
+                                if (callFinished) return;
+                                callFinished = true;
+                                finishCall(status, date, time, people, userPhone, userName);
+                            };
 
-            // Connect to our real Twilio + Gemini Node.js server!
-            fetch(`${API}/api/real-call`, {
-                method: 'POST',
-                headers: authHeaders,
-                body: JSON.stringify(callPayload)
-            }).then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        addLog(translateStr('real-call-initiated'), 'system');
-                        addLog(translateStr('twilio-call-sid') + ' ' + data.callSid, 'system');
-                        agentStatusText.textContent = translateStr('call-live');
+                            eventSource.onmessage = (e) => {
+                                const msg = JSON.parse(e.data);
+                                if (msg.role === 'status') {
+                                    eventSource.close();
+                                    clearTimeout(emergencyTimeout);
+                                    safeFinish(msg.content);
+                                } else if (msg.role === 'agent') {
+                                    addLog(msg.content, 'agent');
+                                } else if (msg.role === 'restaurant') {
+                                    addLog(msg.content, 'restaurant');
+                                } else if (msg.role === 'system') {
+                                    addLog(msg.content, 'system');
+                                }
+                            };
 
-                        // Listen to the live conversation via SSE
-                        const eventSource = new EventSource(`https://moshi-moshi-8dh6.onrender.com/api/call-stream/${data.callSid}`);
-                        // Guard: prevent finishCall from running more than once per call
-                        let callFinished = false;
-                        const safeFinish = (status) => {
-                            if (callFinished) return;
-                            callFinished = true;
-                            finishCall(status, date, time, people, userPhone, userName);
-                        };
-
-                        eventSource.onmessage = (e) => {
-                            const msg = JSON.parse(e.data);
-                            if (msg.role === 'status') {
+                            eventSource.onerror = () => {
                                 eventSource.close();
                                 clearTimeout(emergencyTimeout);
-                                safeFinish(msg.content);
-                            } else if (msg.role === 'agent') {
-                                addLog(msg.content, 'agent');
-                            } else if (msg.role === 'restaurant') {
-                                addLog(msg.content, 'restaurant');
-                            } else if (msg.role === 'system') {
-                                addLog(msg.content, 'system');
-                            }
-                        };
+                                safeFinish('failed');
+                            };
 
-                        eventSource.onerror = () => {
-                            eventSource.close();
-                            clearTimeout(emergencyTimeout);
-                            safeFinish('failed');
-                        };
+                            // Absolute fallback if the SSE never sends a status (e.g. server crash)
+                            // Default to FAILED — never assume success without a confirmation from the server
+                            emergencyTimeout = setTimeout(() => {
+                                eventSource.close();
+                                safeFinish('failed'); // ← was incorrectly 'success' before
+                            }, 90000); // 90s maximum duration
 
-                        // Absolute fallback if the SSE never sends a status (e.g. server crash)
-                        // Default to FAILED — never assume success without a confirmation from the server
-                        emergencyTimeout = setTimeout(() => {
-                            eventSource.close();
-                            safeFinish('failed'); // ← was incorrectly 'success' before
-                        }, 90000); // 90s maximum duration
-
-                    } else {
-                        addLog(`${translateStr('error-prefix')} ${data.error}`, 'error');
-                        finishCall('failed', date, time, people, userPhone, userName);
-                    }
-                }).catch(err => {
-                    addLog(translateStr('failed-backend'), 'error');
-                    finishCall(false, date, time, people, userPhone, userName);
-                });
-        }
-    }
-
-    function finishCall(statusInfo, date, time, people, userPhone, userName) {
-        agentContainer.classList.remove('calling');
-        agentStatusText.textContent = translateStr('agent-standby');
-
-        let isSuccess = statusInfo === true || statusInfo === 'success';
-        let isAlternative = false;
-        let alternatives = null;
-        let confirmedTime = null;
-        let notes = null;
-
-        if (typeof statusInfo === 'string' && statusInfo.startsWith('{')) {
-            try {
-                const parsed = JSON.parse(statusInfo);
-                isSuccess = parsed.type === 'success';
-                isAlternative = parsed.type === 'alternative';
-                alternatives = parsed.alternatives;
-                confirmedTime = parsed.confirmedTime;
-                notes = parsed.notes;
-            } catch (e) { }
+                        } else {
+                            addLog(`${translateStr('error-prefix')} ${data.error}`, 'error');
+                            finishCall('failed', date, time, people, userPhone, userName);
+                        }
+                    }).catch(err => {
+                        addLog(translateStr('failed-backend'), 'error');
+                        finishCall(false, date, time, people, userPhone, userName);
+                    });
+            }
         }
 
-        // Fix resultCard state
-        const altOfferBox = document.getElementById('altOfferBox');
-        const altOfferText = document.getElementById('altOfferText');
-        const resultStatusIcon = document.getElementById('resultStatusIcon');
+        function finishCall(statusInfo, date, time, people, userPhone, userName) {
+            agentContainer.classList.remove('calling');
+            agentStatusText.textContent = translateStr('agent-standby');
 
-        altOfferBox?.classList.add('hidden');
+            let isSuccess = statusInfo === true || statusInfo === 'success';
+            let isAlternative = false;
+            let alternatives = null;
+            let confirmedTime = null;
+            let notes = null;
 
-        // If they missed the live call due to Twilio trial dropping it, mock an interactive transcript so they can see what it looks like!
-        if (isSuccess && callLogContainer.querySelectorAll('.restaurant').length === 0) {
-            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-            const mockLogs = `
+            if (typeof statusInfo === 'string' && statusInfo.startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(statusInfo);
+                    isSuccess = parsed.type === 'success';
+                    isAlternative = parsed.type === 'alternative';
+                    alternatives = parsed.alternatives;
+                    confirmedTime = parsed.confirmedTime;
+                    notes = parsed.notes;
+                } catch (e) { }
+            }
+
+            // Fix resultCard state
+            const altOfferBox = document.getElementById('altOfferBox');
+            const altOfferText = document.getElementById('altOfferText');
+            const resultStatusIcon = document.getElementById('resultStatusIcon');
+
+            altOfferBox?.classList.add('hidden');
+
+            // If they missed the live call due to Twilio trial dropping it, mock an interactive transcript so they can see what it looks like!
+            if (isSuccess && callLogContainer.querySelectorAll('.restaurant').length === 0) {
+                const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+                const mockLogs = `
                 <div class="log-entry system">[${time}] Initializing Gemini 2.5 Flash Speech-To-Text...</div>
                 <div class="log-entry restaurant">[${time}] 電話ありがとうございます。寿司屋「銀座」でございます。(Thank you for calling. This is Sushi Ginza.)</div>
                 <div class="log-entry agent">[${time}] Hello! I would like to make a reservation for ${people} people under the name ${userName}, please.</div>
@@ -748,73 +708,74 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="log-entry restaurant">[${time}] かしこまりました。${people}名様ですね。お待ちしております。(Understood. For ${people} people. We look forward to seeing you.)</div>
                 <div class="log-entry agent">[${time}] Thank you so much! Goodbye!</div>
             `;
-            callLogContainer.insertAdjacentHTML('beforeend', mockLogs);
-        }
-
-        let resultTranscript = document.getElementById('resultTranscript');
-        if (resultTranscript) {
-            resultTranscript.innerHTML = callLogContainer.innerHTML;
-            const logEntries = resultTranscript.querySelectorAll('.log-entry');
-            logEntries.forEach(entry => {
-                entry.style.animation = 'none';
-                entry.style.opacity = '1';
-                entry.style.transform = 'none';
-            });
-            resultTranscript.scrollTop = resultTranscript.scrollHeight;
-        }
-
-        // Update UI based on status
-        if (isSuccess) {
-            resultStatusIcon.className = 'result-icon success';
-            resultStatusIcon.innerHTML = '<i class="fa-regular fa-circle-check"></i>';
-            resultTitle.textContent = translateStr('result-title-success');
-
-            const dateObj = new Date(date);
-            const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-            const finalTime = (confirmedTime && confirmedTime !== 'null' && confirmedTime.trim() !== '') ? confirmedTime : time;
-
-            resultDesc.textContent = translateStr('success-msg')
-                .replace('{people}', people)
-                .replace('{dateStr}', dateStr)
-                .replace('{time}', finalTime);
-
-            if (userPhone) {
-                fetch('https://moshi-moshi-8dh6.onrender.com/api/send-sms', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userName, userPhone, date: dateStr, time: finalTime, people })
-                }).then(() => console.log('SMS confirmation sent!'));
+                callLogContainer.insertAdjacentHTML('beforeend', mockLogs);
             }
-        } else if (isAlternative) {
-            resultStatusIcon.className = 'result-icon alternative';
-            resultStatusIcon.innerHTML = '<i class="fa-solid fa-calendar-day"></i>';
-            resultTitle.textContent = translateStr('alt-offer-title') || 'Alternative Provided';
-            resultDesc.textContent = translateStr('alt-offer-desc') || "The requested time wasn't available, but the restaurant suggested another slot:";
 
-            if (altOfferBox && altOfferText) {
-                altOfferText.textContent = alternatives;
-                altOfferBox.classList.remove('hidden');
+            let resultTranscript = document.getElementById('resultTranscript');
+            if (resultTranscript) {
+                resultTranscript.innerHTML = callLogContainer.innerHTML;
+                const logEntries = resultTranscript.querySelectorAll('.log-entry');
+                logEntries.forEach(entry => {
+                    entry.style.animation = 'none';
+                    entry.style.opacity = '1';
+                    entry.style.transform = 'none';
+                });
+                resultTranscript.scrollTop = resultTranscript.scrollHeight;
             }
-        } else {
-            resultStatusIcon.className = 'result-icon error';
-            resultStatusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
-            resultTitle.textContent = translateStr('reservation-failed') || 'Reservation Failed';
 
-            if (alternatives) {
-                // Show failure + the restaurant's proposed alternative
-                resultDesc.textContent = translateStr('alt-proposed-msg') || `The restaurant couldn't book ${time}, but proposed an alternative:`;
+            // Update UI based on status
+            if (isSuccess) {
+                resultStatusIcon.className = 'result-icon success';
+                resultStatusIcon.innerHTML = '<i class="fa-regular fa-circle-check"></i>';
+                resultTitle.textContent = translateStr('result-title-success');
+
+                const dateObj = new Date(date);
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                const finalTime = (confirmedTime && confirmedTime !== 'null' && confirmedTime.trim() !== '') ? confirmedTime : time;
+
+                resultDesc.textContent = translateStr('success-msg')
+                    .replace('{people}', people)
+                    .replace('{dateStr}', dateStr)
+                    .replace('{time}', finalTime);
+
+                if (userPhone) {
+                    fetch('https://moshi-moshi-8dh6.onrender.com/api/send-sms', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userName, userPhone, date: dateStr, time: finalTime, people })
+                    }).then(() => console.log('SMS confirmation sent!'));
+                }
+            } else if (isAlternative) {
+                resultStatusIcon.className = 'result-icon alternative';
+                resultStatusIcon.innerHTML = '<i class="fa-solid fa-calendar-day"></i>';
+                resultTitle.textContent = translateStr('alt-offer-title') || 'Alternative Provided';
+                resultDesc.textContent = translateStr('alt-offer-desc') || "The requested time wasn't available, but the restaurant suggested another slot:";
+
                 if (altOfferBox && altOfferText) {
                     altOfferText.textContent = alternatives;
                     altOfferBox.classList.remove('hidden');
                 }
-            } else if (notes) {
-                resultDesc.textContent = `${notes} Do you want to call again?`;
             } else {
-                resultDesc.textContent = (translateStr('failed-msg') || '').replace('{time}', time);
-            }
-        }
+                resultStatusIcon.className = 'result-icon error';
+                resultStatusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+                resultTitle.textContent = translateStr('reservation-failed') || 'Reservation Failed';
 
-        resultCard.classList.remove('hidden');
-    }
+                if (alternatives) {
+                    // Show failure + the restaurant's proposed alternative
+                    resultDesc.textContent = translateStr('alt-proposed-msg') || `The restaurant couldn't book ${time}, but proposed an alternative:`;
+                    if (altOfferBox && altOfferText) {
+                        altOfferText.textContent = alternatives;
+                        altOfferBox.classList.remove('hidden');
+                    }
+                } else if (notes) {
+                    resultDesc.textContent = `${notes} Do you want to call again?`;
+                } else {
+                    resultDesc.textContent = (translateStr('failed-msg') || '').replace('{time}', time);
+                }
+            }
+
+            resultCard.classList.remove('hidden');
+        }
+    } // end if (form) guard
 });
