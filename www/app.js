@@ -241,6 +241,17 @@ document.addEventListener('DOMContentLoaded', () => {
         loginModal?.classList.remove('hidden');
     });
 
+    // Intercept "Make Reservation" / "Start Calling" links if user is not logged in
+    document.querySelectorAll('a[href="call.html"]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            if (!authToken || !currentUser) {
+                e.preventDefault();
+                hideModalError();
+                loginModal?.classList.remove('hidden');
+            }
+        });
+    });
+
     closeModal?.addEventListener('click', () => loginModal?.classList.add('hidden'));
     loginModal?.addEventListener('click', (e) => { if (e.target === loginModal) loginModal.classList.add('hidden'); });
 
