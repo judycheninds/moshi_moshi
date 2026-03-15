@@ -832,7 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (isAlternative) {
                 resultStatusIcon.className = 'result-icon alternative';
                 resultStatusIcon.innerHTML = '<i class="fa-solid fa-calendar-day"></i>';
-                resultTitle.textContent = translateStr('alt-offer-title') || 'Alternative Provided';
+                resultTitle.textContent = translateStr('result-title-alt') || 'Alternative Time Offered';
                 resultDesc.textContent = translateStr('alt-offer-desc') || "The requested time wasn't available, but the restaurant suggested another slot:";
 
                 if (altOfferBox && altOfferText) {

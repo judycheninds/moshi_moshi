@@ -40,8 +40,12 @@ const translations = {
         "agent-status-default": "Awaiting Instructions",
         "call-log-default": "Agent initialized. Ready to call.",
         "result-title-success": "Reservation Confirmed!",
+        "result-title-alt": "Alternative Time Offered",
         "result-desc-success": "Your table is booked.",
         "btn-reset": "Make Another Booking",
+        "btn-call-again": "📞 Call Again",
+        "label-adults": "Adults",
+        "label-kids": "Children",
         "footer-desc": "Bridging the language gap for authentic dining experiences.",
         "footer-privacy": "Privacy Policy",
         "footer-terms": "Terms of Service",
@@ -130,6 +134,10 @@ const translations = {
         "result-title-success": "予約確定！",
         "result-desc-success": "お席が予約されました。",
         "btn-reset": "別の予約をする",
+        "btn-call-again": "📞 もう一度電話する",
+        "label-adults": "大人",
+        "label-kids": "子ども",
+        "result-title-alt": "別の時間が提案されました",
         "footer-desc": "言語の壁を越えて、本格的な食体験を。",
         "footer-privacy": "プライバシーポリシー",
         "footer-terms": "利用規約",
@@ -218,6 +226,10 @@ const translations = {
         "result-title-success": "預約成功！",
         "result-desc-success": "您的座位已預訂。",
         "btn-reset": "進行另一筆測試預約",
+        "btn-call-again": "📞 再次撥打",
+        "label-adults": "成人",
+        "label-kids": "兒童",
+        "result-title-alt": "餐廳提供了備選時間",
         "footer-desc": "弭平語言隔閡，為您帶來最道地的用餐體驗。",
         "footer-privacy": "隱私權政策",
         "footer-terms": "服務條款",
@@ -281,7 +293,14 @@ if (typeof navigator !== "undefined" && navigator.language) {
 }
 
 function updateUI() {
+    const resultCard = document.getElementById('resultCard');
+    const resultCardVisible = resultCard && !resultCard.classList.contains('hidden');
+
     document.querySelectorAll("[data-i18n]").forEach(el => {
+        // Never let the i18n engine overwrite content inside the result card
+        // when it's visible — JS owns those values based on call outcome
+        if (resultCardVisible && resultCard.contains(el)) return;
+
         const key = el.getAttribute("data-i18n");
         if (translations[currentLang] && translations[currentLang][key]) {
             el.innerHTML = translations[currentLang][key];
