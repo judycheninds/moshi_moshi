@@ -483,7 +483,10 @@ app.get('/api/call-stream/:callSid', (req, res) => {
 
 // Route called by Frontend to trigger a REAL out-bound call
 app.post('/api/real-call', authMiddleware, callLimiter, async (req, res) => {
-    let { phone, date, time, altTime1, altTime2, people, language, userName, userPhone, uiLanguage, isRebook, acceptedAltTime } = req.body;
+    let { phone, date, time, altTime1, altTime2, people, adults, kids, language, userName, userPhone, uiLanguage, isRebook, acceptedAltTime } = req.body;
+    adults = parseInt(adults) || parseInt(people) || 2;
+    kids   = parseInt(kids)   || 0;
+    people = adults + kids;   // keep total in sync
 
     // Use logged in user ID
     let userId = req.user.id;
@@ -531,6 +534,12 @@ app.post('/api/real-call', authMiddleware, callLimiter, async (req, res) => {
             fallbackText = ` If ${time} is unavailable, you MUST ask for available fallback times. The user specifically approved ${[altTime1, altTime2].filter(Boolean).join(' or ')} as acceptable alternative times. Attempt to book these if offered.`;
         }
 
+        // Build a natural party size description for the agent
+        const partyParts = [];
+        if (adults > 0) partyParts.push(`${adults} adult${adults !== 1 ? 's' : ''}`);
+        if (kids   > 0) partyParts.push(`${kids} child${kids !== 1 ? 'ren' : ''}`);
+        const partyDesc = partyParts.join(' and ') || `${people} people`;
+
         let friendlyDate = date;
         try {
             const dateObj = new Date(date);
@@ -540,9 +549,9 @@ app.post('/api/real-call', authMiddleware, callLimiter, async (req, res) => {
         // Build the goal — different for rebook callback vs fresh call
         let goal;
         if (isRebook && acceptedAltTime) {
-            goal = `You are calling back this restaurant. You called a few minutes ago and the restaurant said ${time} was unavailable and offered ${acceptedAltTime} instead. You have now confirmed with ${userName} and they ACCEPT the ${acceptedAltTime} slot. Your goal is to book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${acceptedAltTime}. Be warm and reference that you called before. CRITICAL: Never speak the year out loud.`;
+            goal = `You are calling back this restaurant. You called a few minutes ago and the restaurant said ${time} was unavailable and offered ${acceptedAltTime} instead. You have now confirmed with ${userName} and they ACCEPT the ${acceptedAltTime} slot. Your goal is to book a table for ${partyDesc} under the name "${userName}" on ${friendlyDate} at ${acceptedAltTime}. Be warm and reference that you called before. CRITICAL: Never speak the year out loud.`;
         } else {
-            goal = `Book a table for ${people} people under the name "${userName}" on ${friendlyDate} at ${time}.${fallbackText} CRITICAL: Never speak the year out loud.`;
+            goal = `Book a table for ${partyDesc} under the name "${userName}" on ${friendlyDate} at ${time}.${fallbackText} CRITICAL: Never speak the year out loud.`;
         }
 
         // Store the goal state BEFORE creating the call to avoid race condition
@@ -556,6 +565,8 @@ app.post('/api/real-call', authMiddleware, callLimiter, async (req, res) => {
             rawDate: date,
             rawTime: isRebook && acceptedAltTime ? acceptedAltTime : time,
             rawPeople: people,
+            rawAdults: adults,
+            rawKids: kids,
             restaurantPhone: phone,
             isRebook: !!isRebook,
             acceptedAltTime: acceptedAltTime || null,
@@ -1074,13 +1085,16 @@ app.post('/twilio/call-status', async (req, res) => {
                 - Set "success": FALSE if the agent said they need to "check with the client" or ended the call without a firm booking.
                 - If the restaurant proposed alternative times but NO booking was confirmed, set "alternatives" to those proposed times (e.g. "11:00 AM" or "14:00").
                 - IMPORTANT: Do NOT confuse automated voicemail messages or system errors (e.g. "The number you dialed is not available") as alternative times! If the call hit voicemail, "alternatives" MUST be null and "notes" should explain that it hit voicemail.
+                - DEPOSIT: If the restaurant asked for any deposit, prepayment, or credit card hold, set "depositRequested": true and "depositAmount" to the amount in smallest currency unit (e.g. 1000 for $10.00). If no deposit was mentioned, set "depositRequested": false.
                 
                 Answer with ONLY a JSON object (no markdown, no explanation):
                 {
                   "success": true or false,
                   "confirmedTime": "the actual confirmed time string if success=true, otherwise null",
                   "alternatives": "string describing the alternative times the restaurant offered, or null if none were offered",
-                  "notes": "one sentence summary of what happened"
+                  "notes": "one sentence summary of what happened",
+                  "depositRequested": true or false,
+                  "depositAmount": number in smallest currency unit or null
                 }
             `;
 
@@ -1112,11 +1126,51 @@ app.post('/twilio/call-status', async (req, res) => {
             const isSuccess = evalResult.success === true;
             const statusType = isSuccess ? 'success' : (evalResult.alternatives ? 'alternative' : 'failed');
 
+            // ── Deposit Handling ──────────────────────────────────────────────
+            let depositResult = null;
+            if (evalResult.depositRequested && isSuccess) {
+                depositResult = { requested: true, amount: evalResult.depositAmount || null, currency: 'usd', charged: false, error: null };
+                broadcastLog(callSid, 'system', `💳 Restaurant requested a deposit. Attempting to charge card…`);
+
+                try {
+                    if (!stripe) throw new Error('Stripe not configured');
+                    const { data: user } = await supabase.from('users').select('stripe_customer_id').eq('id', callState.userId).single();
+                    if (!user?.stripe_customer_id) throw new Error('No card on file');
+
+                    const pms = await stripe.paymentMethods.list({ customer: user.stripe_customer_id, type: 'card' });
+                    if (!pms.data.length) throw new Error('No payment method found');
+
+                    const depositAmt = evalResult.depositAmount || 1000; // default $10 if amount unknown
+                    const pi = await stripe.paymentIntents.create({
+                        amount: depositAmt,
+                        currency: 'usd',
+                        customer: user.stripe_customer_id,
+                        payment_method: pms.data[0].id,
+                        off_session: true,
+                        confirm: true,
+                        description: `Restaurant deposit for ${callState.restaurantPhone} on ${callState.rawDate}`
+                    });
+
+                    if (pi.status === 'succeeded') {
+                        depositResult.charged = true;
+                        broadcastLog(callSid, 'system', `✅ Deposit of $${(depositAmt/100).toFixed(2)} charged successfully.`);
+                    } else {
+                        depositResult.error = `Payment status: ${pi.status}`;
+                        broadcastLog(callSid, 'system', `⚠️ Deposit charge incomplete: ${pi.status}`);
+                    }
+                } catch (depErr) {
+                    depositResult.error = depErr.message;
+                    broadcastLog(callSid, 'system', `⚠️ Deposit charge failed: ${depErr.message}`);
+                }
+            }
+            // ── End Deposit ──────────────────────────────────────────────────
+
             broadcastLog(callSid, 'status', JSON.stringify({
                 type: statusType,
                 confirmedTime: evalResult.confirmedTime,
                 alternatives: evalResult.alternatives,
-                notes: evalResult.notes
+                notes: evalResult.notes,
+                deposit: depositResult   // null if no deposit was requested
             }));
 
             if (evalResult.alternatives) broadcastLog(callSid, 'agent', `💡 Alternatives: ${evalResult.alternatives}`);

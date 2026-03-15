@@ -60,26 +60,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ---- Counter functionality ----
-    const minusBtn = document.getElementById('minusBtn');
-    const plusBtn = document.getElementById('plusBtn');
-    const peopleInput = document.getElementById('people');
+    // ---- Adults + Kids counter functionality ----
+    const adultsInput   = document.getElementById('adults');
+    const kidsInput     = document.getElementById('kids');
+    const peopleHidden  = document.getElementById('people');   // hidden total
+    const guestTotalEl  = document.getElementById('guestTotalText');
 
-    minusBtn?.addEventListener('click', () => {
-        if (!peopleInput) return;
-        let val = parseInt(peopleInput.value);
-        if (val > 1) {
-            peopleInput.value = val - 1;
+    function updateGuestTotal() {
+        const a = parseInt(adultsInput?.value || 0);
+        const k = parseInt(kidsInput?.value   || 0);
+        if (peopleHidden) peopleHidden.value = a + k;
+        if (guestTotalEl) {
+            const parts = [];
+            if (a > 0) parts.push(`${a} adult${a !== 1 ? 's' : ''}`);
+            if (k > 0) parts.push(`${k} child${k !== 1 ? 'ren' : ''}`);
+            guestTotalEl.textContent = parts.length ? parts.join(' + ') : '0 guests';
         }
-    });
+    }
 
-    plusBtn?.addEventListener('click', () => {
-        if (!peopleInput) return;
-        let val = parseInt(peopleInput.value);
-        if (val < 20) {
-            peopleInput.value = val + 1;
-        }
+    document.getElementById('minusAdultsBtn')?.addEventListener('click', () => {
+        if (!adultsInput) return;
+        if (parseInt(adultsInput.value) > 1) { adultsInput.value = parseInt(adultsInput.value) - 1; updateGuestTotal(); }
     });
+    document.getElementById('plusAdultsBtn')?.addEventListener('click', () => {
+        if (!adultsInput) return;
+        if (parseInt(adultsInput.value) < 20) { adultsInput.value = parseInt(adultsInput.value) + 1; updateGuestTotal(); }
+    });
+    document.getElementById('minusKidsBtn')?.addEventListener('click', () => {
+        if (!kidsInput) return;
+        if (parseInt(kidsInput.value) > 0) { kidsInput.value = parseInt(kidsInput.value) - 1; updateGuestTotal(); }
+    });
+    document.getElementById('plusKidsBtn')?.addEventListener('click', () => {
+        if (!kidsInput) return;
+        if (parseInt(kidsInput.value) < 20) { kidsInput.value = parseInt(kidsInput.value) + 1; updateGuestTotal(); }
+    });
+    updateGuestTotal(); // init
 
     // ---- Time select syncing ----
     // Sync hour+minute selects → hidden input for all 3 time fields
@@ -616,13 +631,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const time = document.getElementById('time').value;
             const altTime1 = document.getElementById('altTime1').value;
             const altTime2 = document.getElementById('altTime2').value;
-            const people = document.getElementById('people').value;
+            const people   = document.getElementById('people').value;
+            const adults   = document.getElementById('adults')?.value || people;
+            const kids     = document.getElementById('kids')?.value   || '0';
 
             callLogContainer.innerHTML = '';
             addLog(translateStr('init-agent'), 'system');
 
             const agentLang = document.getElementById('agentLang')?.value || 'ja-JP';
-            const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, language: agentLang, uiLanguage: window.currentLang || 'en', isRebook: window._isRebook || false, acceptedAltTime: window._acceptedAltTime || null };
+            const callPayload = { phone, userName, userPhone, date, time, altTime1, altTime2, people, adults: parseInt(adults), kids: parseInt(kids), language: agentLang, uiLanguage: window.currentLang || 'en', isRebook: window._isRebook || false, acceptedAltTime: window._acceptedAltTime || null };
             // Reset rebook flags after use
             window._isRebook = false;
             window._acceptedAltTime = null;
@@ -738,6 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let alternatives = null;
             let confirmedTime = null;
             let notes = null;
+            let depositInfo = null;
 
             if (typeof statusInfo === 'string' && statusInfo.startsWith('{')) {
                 try {
@@ -747,6 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alternatives = parsed.alternatives;
                     confirmedTime = parsed.confirmedTime;
                     notes = parsed.notes;
+                    depositInfo = parsed.deposit || null;   // { requested, amount, currency, charged, error }
                 } catch (e) { }
             }
 
@@ -756,6 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const resultStatusIcon = document.getElementById('resultStatusIcon');
 
             altOfferBox?.classList.add('hidden');
+            document.getElementById('depositBox')?.classList.add('hidden');
 
             // If they missed the live call due to Twilio trial dropping it, mock an interactive transcript so they can see what it looks like!
             if (isSuccess && callLogContainer.querySelectorAll('.restaurant').length === 0) {
@@ -837,6 +857,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             resultCard.classList.remove('hidden');
+
+            // Show deposit notification if restaurant requested one
+            if (depositInfo && depositInfo.requested) {
+                const depositBox    = document.getElementById('depositBox');
+                const depositTitle  = document.getElementById('depositTitle');
+                const depositDesc   = document.getElementById('depositDesc');
+                const depositStatus = document.getElementById('depositStatus');
+                if (depositBox) {
+                    depositBox.classList.remove('hidden');
+                    const amt = depositInfo.amount
+                        ? `${(depositInfo.amount / 100).toFixed(2)} ${(depositInfo.currency || 'USD').toUpperCase()}`
+                        : 'an amount';
+                    depositDesc.textContent = `The restaurant requested a deposit of ${amt} to hold your reservation.`;
+                    if (depositInfo.charged) {
+                        depositTitle.textContent = '✅ Deposit Charged';
+                        depositStatus.className  = 'deposit-status deposit-charged';
+                        depositStatus.textContent = `Your card was successfully charged ${amt}.`;
+                    } else {
+                        depositTitle.textContent = '⚠️ Deposit Required — Action Needed';
+                        depositStatus.className  = 'deposit-status deposit-pending';
+                        depositStatus.textContent = depositInfo.error
+                            ? `Charge failed: ${depositInfo.error}. Please contact the restaurant directly to pay the deposit.`
+                            : 'We could not charge your card automatically. Please contact the restaurant to pay the deposit.';
+                    }
+                }
+            }
         }
     } // end if (form) guard
 });
