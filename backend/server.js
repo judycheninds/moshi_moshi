@@ -754,6 +754,7 @@ app.post('/twilio/gather-result', async (req, res) => {
             - If the restaurant says something unclear or you need a moment, say something like "稍等一下" or "すみません、もう一度" — keep it natural.
             - If the restaurant CONFIRMS the booking: thank them warmly and say goodbye. That means the reservation succeeded.
             - If the restaurant says the requested time is NOT available: ask what other times they have available. Do NOT accept any alternative time on your own — say you need to check with ${callState.userName} and end the call politely.
+            - If you hear an automated voicemail, an answering machine, or a system message saying the number is "not available" (e.g., "The subscriber you have dialed is not available"), DO NOT treat it as a person talking. DO NOT treat random phone numbers in an automated message as alternative reservation times. Say a natural goodbye and end the call.
             - If the restaurant asks for the name: say "${callState.userName}".
             - If the restaurant asks for a phone number: say "${callState.userPhone}".
             - If the restaurant asks for a credit card or deposit: politely decline and say you will provide that when you arrive.
@@ -1050,6 +1051,7 @@ app.post('/twilio/call-status', async (req, res) => {
                 - Set "success": FALSE if the restaurant said they are full, no availability, or proposed ANY different time (e.g. "11am", "2pm") WITHOUT the agent explicitly saying "yes, I'll book that" or "confirmed".
                 - Set "success": FALSE if the agent said they need to "check with the client" or ended the call without a firm booking.
                 - If the restaurant proposed alternative times but NO booking was confirmed, set "alternatives" to those proposed times (e.g. "11:00 AM" or "14:00").
+                - IMPORTANT: Do NOT confuse automated voicemail messages or system errors (e.g. "The number you dialed is not available") as alternative times! If the call hit voicemail, "alternatives" MUST be null and "notes" should explain that it hit voicemail.
                 
                 Answer with ONLY a JSON object (no markdown, no explanation):
                 {
