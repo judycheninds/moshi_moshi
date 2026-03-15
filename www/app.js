@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ── Load Reservation History ─────────────────────────────────────
         async function loadHistory() {
             const historyEl = document.getElementById('crm-history');
-            if (!historyEl || historyEl._loaded) return;
+            if (!historyEl) return;
 
             historyEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading history...</div>';
             try {
@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                           : status === 'failed'    ? 'Failed'
                                           : status.charAt(0).toUpperCase() + status.slice(1);
                         return `
-                        <div class="crm-res-card">
+                         <div class="crm-res-card">
                             <div class="crm-res-status ${status}">
                                 <i class="fa-solid ${statusIcon}"></i> ${statusLabel}
                             </div>
@@ -444,9 +444,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <div class="crm-res-phone"><i class="fa-solid fa-phone"></i> ${r.restaurantPhone || '—'}</div>
                             ${r.notes ? `<div class="crm-res-notes">${r.notes}</div>` : ''}
-                        </div>`;
+                         </div>`;
                     }).join('');
-                    historyEl._loaded = true;
                 }
             } catch (e) {
                 console.error('History load error:', e);
@@ -457,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ── Load Billing Info ────────────────────────────────────────────
         async function loadBilling() {
             const billingEl = document.getElementById('crm-billing-info');
-            if (!billingEl || billingEl._loaded) return;
+            if (!billingEl) return;
 
             billingEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading billing...</div>';
             try {
@@ -479,7 +478,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="crm-res-status confirmed" style="margin:0;"><i class="fa-solid fa-check"></i> Default</div>
                         </div>
                     `).join('');
-                    billingEl._loaded = true;
                 }
             } catch (e) {
                 console.error('Billing load error:', e);

@@ -236,6 +236,7 @@ app.get('/api/reservations', authMiddleware, async (req, res) => {
         people: r.people,
         guestName: r.guest_name,
         status: r.status,
+        notes: r.notes || null,
         createdAt: r.created_at
     })));
 });
