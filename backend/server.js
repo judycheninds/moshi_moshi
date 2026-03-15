@@ -758,7 +758,7 @@ app.post('/twilio/gather-result', async (req, res) => {
             - Keep each reply SHORT — this is a phone call. 1–3 sentences max.
             - If the restaurant says something unclear or you need a moment, say something like "稍等一下" or "すみません、もう一度" — keep it natural.
             - If the restaurant CONFIRMS the booking: thank them warmly and say goodbye. That means the reservation succeeded.
-            - If the restaurant says the requested time is NOT available: ask what other times they have available. Do NOT accept any alternative time on your own — say you need to check with ${callState.userName} and end the call politely.
+            - If the restaurant says the requested time is NOT available: ask what other times they have available. When the restaurant proposes an alternative time, REPEAT that specific time back to confirm you heard it correctly (e.g. "Understood, so you have availability at 7:00 PM?"), then say you need to check with ${callState.userName} and end the call politely. This repetition is crucial — it ensures the proposed time is clearly recorded in the transcript.
             - If you hear an automated voicemail, an answering machine, or a system message saying the number is "not available" (e.g., "The subscriber you have dialed is not available"), DO NOT treat it as a person talking. DO NOT treat random phone numbers in an automated message as alternative reservation times. Say a natural goodbye and end the call.
             - If the restaurant asks for the name: say "${callState.userName}".
             - If the restaurant asks for a phone number: say "${callState.userPhone}".
@@ -1070,9 +1070,9 @@ app.post('/twilio/call-status', async (req, res) => {
             }
             // ── END PRE-CHECK ──
 
-            // Gemini evaluates outcome AND extracts alternatives
             const evalPrompt = `
                 You are evaluating a phone call where an AI assistant tried to book a restaurant reservation at ${callState.rawTime} on ${callState.rawDate}.
+                The conversation may be in Japanese, Chinese, Korean, or English — handle all languages.
                 
                 CONVERSATION:
                 ${conversation}
@@ -1081,18 +1081,26 @@ app.post('/twilio/call-status', async (req, res) => {
                 
                 CRITICAL RULES — read carefully:
                 - Set "success": TRUE only if the restaurant explicitly said it is CONFIRMED/BOOKED for a specific time AND the agent accepted.
-                - Set "success": FALSE if the restaurant said they are full, no availability, or proposed ANY different time (e.g. "11am", "2pm") WITHOUT the agent explicitly saying "yes, I'll book that" or "confirmed".
+                - Set "success": FALSE if the restaurant said they are full, no availability, or proposed ANY different time WITHOUT the agent explicitly confirming a booking.
                 - Set "success": FALSE if the agent said they need to "check with the client" or ended the call without a firm booking.
-                - If the restaurant proposed alternative times but NO booking was confirmed, set "alternatives" to those proposed times (e.g. "11:00 AM" or "14:00").
-                - IMPORTANT: Do NOT confuse automated voicemail messages or system errors (e.g. "The number you dialed is not available") as alternative times! If the call hit voicemail, "alternatives" MUST be null and "notes" should explain that it hit voicemail.
-                - DEPOSIT: If the restaurant asked for any deposit, prepayment, or credit card hold, set "depositRequested": true and "depositAmount" to the amount in smallest currency unit (e.g. 1000 for $10.00). If no deposit was mentioned, set "depositRequested": false.
+                
+                ALTERNATIVE TIME EXTRACTION — this is critical:
+                - Read the FULL conversation carefully, including Japanese/Chinese/Korean text.
+                - If the restaurant mentioned ANY specific time(s) that they DO have available (e.g. "18時はいかがですか", "下午6點可以嗎", "오후 6시는 어떠세요", "how about 6pm"), extract ALL of them.
+                - Normalize extracted times to a clear English format like "6:00 PM" or "6:00 PM and 7:30 PM".
+                - If the agent repeated the time back (e.g. "so you have availability at 6:00 PM?"), use that confirmed time as the alternative.
+                - Set "alternatives" to a clear, readable English string of all proposed times, e.g. "6:00 PM" or "11:00 AM and 2:00 PM".
+                - Do NOT confuse voicemail messages or system error phone numbers as alternative times.
+                - If no alternative was proposed, set "alternatives" to null.
+                
+                DEPOSIT: If the restaurant asked for any deposit, prepayment, or credit card hold, set "depositRequested": true and "depositAmount" to the amount in smallest currency unit (e.g. 1000 for $10.00). If no deposit was mentioned, set "depositRequested": false.
                 
                 Answer with ONLY a JSON object (no markdown, no explanation):
                 {
                   "success": true or false,
                   "confirmedTime": "the actual confirmed time string if success=true, otherwise null",
-                  "alternatives": "string describing the alternative times the restaurant offered, or null if none were offered",
-                  "notes": "one sentence summary of what happened",
+                  "alternatives": "clear English string of alternative time(s) the restaurant offered, or null",
+                  "notes": "one sentence summary in English of what happened",
                   "depositRequested": true or false,
                   "depositAmount": number in smallest currency unit or null
                 }
@@ -1122,6 +1130,38 @@ app.post('/twilio/call-status', async (req, res) => {
                 evalResult.success = false;
                 evalResult.notes = "The restaurant's phone number was not available or reached an automated voicemail.";
             }
+
+            // ── Regex fallback: scan full conversation for time patterns if Gemini missed them ──
+            if (!evalResult.success && !evalResult.alternatives) {
+                const fullConvo = conversation;
+                // Match patterns like 18:00, 6pm, 6:30 PM, 午後6時, 下午6點, 18時, etc.
+                const timePatterns = [
+                    /\b(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?\b/g,       // 18:00, 6:30 PM
+                    /\b(\d{1,2})\s*(AM|PM|am|pm)\b/g,                  // 6pm, 11am
+                    /([0-9]{1,2})時(半)?/g,                              // Japanese: 18時、6時半
+                    /([0-9]{1,2})點(半)?/g,                              // Chinese: 6點、6點半
+                    /오후\s*([0-9]{1,2})\s*시/g,                         // Korean: 오후 6시
+                    /오전\s*([0-9]{1,2})\s*시/g,                         // Korean AM
+                ];
+                const foundTimes = new Set();
+                for (const pat of timePatterns) {
+                    const matches = [...fullConvo.matchAll(pat)];
+                    for (const m of matches) {
+                        const raw = m[0].trim();
+                        // Skip the originally requested time to avoid false positives
+                        if (!callState.rawTime || !raw.includes(callState.rawTime.replace(':','').substring(0,2))) {
+                            foundTimes.add(raw);
+                        }
+                    }
+                }
+                if (foundTimes.size > 0) {
+                    // Only use regex results if Gemini didn't find any — log and apply
+                    const regexAlt = [...foundTimes].slice(0, 3).join(' or ');
+                    console.log('[Eval] Regex fallback found times:', regexAlt);
+                    evalResult.alternatives = regexAlt;
+                }
+            }
+            // ── End fallback ──
 
             const isSuccess = evalResult.success === true;
             const statusType = isSuccess ? 'success' : (evalResult.alternatives ? 'alternative' : 'failed');
