@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`Install prompt outcome: ${outcome}`);
                 deferredPrompt = null;
             } else {
-                showInstallModal();
+                alert('App download is not available at the moment. You may need to use Safari (on iOS) or Chrome (on Android) to install this as an app.');
             }
         });
     });
@@ -65,14 +65,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const plusBtn = document.getElementById('plusBtn');
     const peopleInput = document.getElementById('people');
 
-    minusBtn.addEventListener('click', () => {
+    minusBtn?.addEventListener('click', () => {
+        if (!peopleInput) return;
         let val = parseInt(peopleInput.value);
         if (val > 1) {
             peopleInput.value = val - 1;
         }
     });
 
-    plusBtn.addEventListener('click', () => {
+    plusBtn?.addEventListener('click', () => {
+        if (!peopleInput) return;
         let val = parseInt(peopleInput.value);
         if (val < 20) {
             peopleInput.value = val + 1;
@@ -182,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSignUpSteps() {
+        if (!stepAccount) return;
         if (!isSignUpMode) {
             stepAccount.classList.remove('hidden');
             stepPersonal.classList.add('hidden');
@@ -203,31 +206,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    nextBtn.addEventListener('click', (e) => { e.preventDefault(); if (currentSignUpStep < 2) { currentSignUpStep++; updateSignUpSteps(); } });
-    prevBtn.addEventListener('click', (e) => { e.preventDefault(); if (currentSignUpStep > 0) { currentSignUpStep--; updateSignUpSteps(); } });
+    nextBtn?.addEventListener('click', (e) => { e.preventDefault(); if (currentSignUpStep < 2) { currentSignUpStep++; updateSignUpSteps(); } });
+    prevBtn?.addEventListener('click', (e) => { e.preventDefault(); if (currentSignUpStep > 0) { currentSignUpStep--; updateSignUpSteps(); } });
 
-    modalToggleBtn.addEventListener('click', (e) => {
+    modalToggleBtn?.addEventListener('click', (e) => {
         e.preventDefault();
         hideModalError();
         isSignUpMode = !isSignUpMode;
         if (isSignUpMode) {
-            modalTitle.textContent = translateStr('modal-title-signup');
-            modalDesc.textContent = translateStr('modal-desc-signup');
-            modalSubmitBtn.textContent = translateStr('modal-signup');
-            modalToggleText.textContent = translateStr('modal-has-account');
-            modalToggleBtn.textContent = translateStr('btn-signin');
+            if (modalTitle) modalTitle.textContent = translateStr('modal-title-signup');
+            if (modalDesc) modalDesc.textContent = translateStr('modal-desc-signup');
+            if (modalSubmitBtn) modalSubmitBtn.textContent = translateStr('modal-signup');
+            if (modalToggleText) modalToggleText.textContent = translateStr('modal-has-account');
+            if (modalToggleBtn) modalToggleBtn.textContent = translateStr('btn-signin');
             currentSignUpStep = 0; updateSignUpSteps();
         } else {
-            modalTitle.textContent = translateStr('modal-title');
-            modalDesc.textContent = translateStr('modal-desc');
-            modalSubmitBtn.textContent = translateStr('btn-signin');
-            modalToggleText.textContent = translateStr('modal-no-account');
-            modalToggleBtn.textContent = translateStr('modal-signup');
+            if (modalTitle) modalTitle.textContent = translateStr('modal-title');
+            if (modalDesc) modalDesc.textContent = translateStr('modal-desc');
+            if (modalSubmitBtn) modalSubmitBtn.textContent = translateStr('btn-signin');
+            if (modalToggleText) modalToggleText.textContent = translateStr('modal-no-account');
+            if (modalToggleBtn) modalToggleBtn.textContent = translateStr('modal-signup');
             updateSignUpSteps();
         }
     });
 
-    loginBtn.addEventListener('click', (e) => {
+    loginBtn?.addEventListener('click', (e) => {
         e.preventDefault();
         // If already logged in, open CRM dashboard instead
         if (authToken && currentUser) {
@@ -235,13 +238,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         hideModalError();
-        loginModal.classList.remove('hidden');
+        loginModal?.classList.remove('hidden');
     });
 
-    closeModal.addEventListener('click', () => loginModal.classList.add('hidden'));
-    loginModal.addEventListener('click', (e) => { if (e.target === loginModal) loginModal.classList.add('hidden'); });
+    closeModal?.addEventListener('click', () => loginModal?.classList.add('hidden'));
+    loginModal?.addEventListener('click', (e) => { if (e.target === loginModal) loginModal.classList.add('hidden'); });
 
-    loginForm.addEventListener('submit', async (e) => {
+    loginForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         hideModalError();
         const originalText = modalSubmitBtn.innerHTML;
@@ -402,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- Fill today's date ----
     const dateInput = document.getElementById('date');
     const today = new Date().toISOString().split('T')[0];
-    dateInput.value = today;
+    if (dateInput) dateInput.value = today;
 
     // ---- Schedule Call Mode ----
     let callMode = 'now'; // 'now' | 'schedule'
