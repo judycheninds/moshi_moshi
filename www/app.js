@@ -580,12 +580,10 @@ document.addEventListener('DOMContentLoaded', () => {
             window._isRebook = true;
             window._acceptedAltTime = acceptedTime || altOfferText?.textContent?.trim() || null;
 
-            // Restore button state
-            btnText.textContent = translateStr('btn-call');
-            callBtn.disabled = false;
-            callBtn.style.opacity = '1';
+            // Restore button state — respect auth
             btnLoader.classList.add('hidden');
             btnText.classList.remove('hidden');
+            updateCallBtnState();
         });
 
 
@@ -634,7 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert('Please pick a date and time to schedule the call.');
                     btnLoader.classList.add('hidden');
                     btnText.classList.remove('hidden');
-                    callBtn.disabled = false;
+                    updateCallBtnState();
                     return;
                 }
 
@@ -661,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 btnLoader.classList.add('hidden');
                 btnText.classList.remove('hidden');
-                callBtn.disabled = false;
+                updateCallBtnState();
                 return;
             } else {
                 // ── CALL NOW MODE ──────────────────────────────────────────────
