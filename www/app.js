@@ -109,21 +109,39 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = JSON.parse(localStorage.getItem('mm_user') || 'null');
 
     function updateCallBtnState() {
+        // Handle call.html specific button
         const callBtn = document.getElementById('callBtn');
         const callBtnText = document.getElementById('callBtnText');
-        if (!callBtn || !callBtnText) return;
-
-        if (authToken && currentUser) {
-            callBtn.disabled = false;
-            callBtn.style.opacity = '1';
-            callBtn.style.cursor = 'pointer';
-            callBtnText.textContent = translateStr('btn-call') || 'Initiate AI Call';
-        } else {
-            callBtn.disabled = true;
-            callBtn.style.opacity = '0.5';
-            callBtn.style.cursor = 'not-allowed';
-            callBtnText.textContent = 'Please Login to Call';
+        if (callBtn && callBtnText) {
+            if (authToken && currentUser) {
+                callBtn.disabled = false;
+                callBtn.style.opacity = '1';
+                callBtn.style.cursor = 'pointer';
+                callBtn.classList.remove('btn-disabled');
+                callBtnText.setAttribute('data-i18n', 'btn-call');
+                callBtnText.textContent = translateStr('btn-call') || 'Initiate AI Call';
+            } else {
+                callBtn.disabled = true;
+                callBtn.style.opacity = '0.5';
+                callBtn.style.cursor = 'not-allowed';
+                callBtn.classList.add('btn-disabled');
+                callBtnText.removeAttribute('data-i18n');
+                callBtnText.textContent = '🚫 Please Login to Call';
+            }
         }
+
+        // Handle index.html specific links (disabling them visually instead of just intercepting)
+        document.querySelectorAll('a[href="call.html"]').forEach(link => {
+            if (authToken && currentUser) {
+                link.style.opacity = '1';
+                link.style.pointerEvents = 'auto';
+                link.style.cursor = 'pointer';
+            } else {
+                link.style.opacity = '0.5';
+                link.style.cursor = 'not-allowed';
+                // Note: we don't disable pointerEvents here so the interceptor can catch clicks and show the modal!
+            }
+        });
     }
 
     function setAuth(token, user) {
