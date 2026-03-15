@@ -776,6 +776,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             altOfferBox?.classList.add('hidden');
             document.getElementById('depositBox')?.classList.add('hidden');
+            const callAgainBtn = document.getElementById('callAgainBtn');
+            if (callAgainBtn) callAgainBtn.style.display = 'none';
 
             // If they missed the live call due to Twilio trial dropping it, mock an interactive transcript so they can see what it looks like!
             if (isSuccess && callLogContainer.querySelectorAll('.restaurant').length === 0) {
@@ -843,16 +845,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultTitle.textContent = translateStr('reservation-failed') || 'Reservation Failed';
 
                 if (alternatives) {
-                    // Show failure + the restaurant's proposed alternative
                     resultDesc.textContent = translateStr('alt-proposed-msg') || `The restaurant couldn't book ${time}, but proposed an alternative:`;
                     if (altOfferBox && altOfferText) {
                         altOfferText.textContent = alternatives;
                         altOfferBox.classList.remove('hidden');
                     }
                 } else if (notes) {
-                    resultDesc.textContent = `${notes} Do you want to call again?`;
+                    resultDesc.textContent = `${notes}`;
                 } else {
                     resultDesc.textContent = (translateStr('failed-msg') || '').replace('{time}', time);
+                }
+
+                // Show "Call Again" immediately for any failed call
+                if (callAgainBtn) {
+                    callAgainBtn.style.display = 'block';
+                    callAgainBtn.onclick = () => {
+                        resultCard.classList.add('hidden');
+                        callLogContainer.innerHTML = '';
+                        addLog(translateStr('init-agent') || 'Initiating agent...', 'system');
+                        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                    };
                 }
             }
 
