@@ -102,7 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ---- Auth State ----
-    const API = 'https://moshi-moshi-8dh6.onrender.com';
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+    const API = isLocal ? 'http://localhost:3000' : 'https://moshi-moshi-8dh6.onrender.com';
     let authToken = localStorage.getItem('mm_token') || null;
     let currentUser = JSON.parse(localStorage.getItem('mm_user') || 'null');
 
