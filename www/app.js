@@ -477,7 +477,15 @@ document.addEventListener('DOMContentLoaded', () => {
         modeNowBtn.classList.toggle('active', mode === 'now');
         modeSchedBtn.classList.toggle('active', mode === 'schedule');
         schedPickerWrap.classList.toggle('hidden', mode === 'now');
-        if (callBtnText) callBtnText.textContent = mode === 'now' ? translateStr('btn-call') : translateStr('btn-schedule') || '📅 Schedule Call';
+        if (callBtnText) {
+            if (authToken && currentUser) {
+                const textKey = mode === 'now' ? 'btn-call' : 'btn-schedule';
+                callBtnText.setAttribute('data-i18n', textKey);
+                callBtnText.textContent = translateStr(textKey) || (mode === 'now' ? 'Initiate AI Call' : '📅 Schedule Call');
+            } else {
+                callBtnText.textContent = '🚫 Please Login to Call';
+            }
+        }
     }
 
     modeNowBtn?.addEventListener('click', () => setCallMode('now'));
