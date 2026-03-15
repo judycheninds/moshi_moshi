@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`Install prompt outcome: ${outcome}`);
                 deferredPrompt = null;
             } else {
-                alert('App download is not available at the moment. You may need to use Safari (on iOS) or Chrome (on Android) to install this as an app.');
+                showInstallModal();
             }
         });
     });
