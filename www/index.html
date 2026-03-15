@@ -512,10 +512,46 @@
                 </div>
             </div>
 
-            <div class="crm-section">
-                <h3><i class="fa-solid fa-clock-rotate-left"></i> Reservation History</h3>
-                <div id="crm-history" class="crm-history">
-                    <div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+            <div class="crm-tabs">
+                <button class="crm-tab active" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i> <span
+                        data-i18n="crm-tab-history">History</span></button>
+                <button class="crm-tab" data-tab="profile"><i class="fa-solid fa-user"></i> <span
+                        data-i18n="crm-tab-profile">Profile</span></button>
+                <button class="crm-tab" data-tab="billing"><i class="fa-solid fa-credit-card"></i> <span
+                        data-i18n="crm-tab-billing">Billing</span></button>
+            </div>
+
+            <div class="crm-content">
+                <!-- History Tab -->
+                <div id="crm-tab-history" class="crm-tab-pane active">
+                    <div id="crm-history" class="crm-history">
+                        <div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Profile Tab -->
+                <div id="crm-tab-profile" class="crm-tab-pane hidden">
+                    <div class="crm-profile-form">
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-user"></i> Name</label>
+                            <input type="text" id="crm-edit-name" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-envelope"></i> Email</label>
+                            <input type="email" id="crm-edit-email" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-mobile-screen"></i> Phone Number</label>
+                            <input type="tel" id="crm-edit-phone" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Billing Tab -->
+                <div id="crm-tab-billing" class="crm-tab-pane hidden">
+                    <div id="crm-billing-info" class="crm-billing">
+                        <div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+                    </div>
                 </div>
             </div>
 

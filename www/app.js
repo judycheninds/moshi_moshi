@@ -298,18 +298,56 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!dashboard) return;
         dashboard.classList.remove('hidden');
 
-        // Load profile
+        // Load profile header
         document.getElementById('crm-name').textContent = currentUser.name;
         document.getElementById('crm-email').textContent = currentUser.email;
         document.getElementById('crm-phone').textContent = currentUser.phone || '—';
 
-        // Load reservation history
+        // Load profile tab inputs
+        document.getElementById('crm-edit-name').value = currentUser.name;
+        document.getElementById('crm-edit-email').value = currentUser.email;
+        document.getElementById('crm-edit-phone').value = currentUser.phone || '';
+
+        // Tab Switching Logic
+        const tabs = document.querySelectorAll('.crm-tab');
+        const panes = document.querySelectorAll('.crm-tab-pane');
+
+        tabs.forEach(tab => {
+            // Remove old listeners to prevent duplicates
+            const newTab = tab.cloneNode(true);
+            tab.parentNode.replaceChild(newTab, tab);
+
+            newTab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                panes.forEach(p => p.classList.add('hidden'));
+                p.classList.remove('active'); // Wait, the pane doesn't use active block, just hidden
+
+                // Fix:
+                document.querySelectorAll('.crm-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.crm-tab-pane').forEach(p => {
+                    p.classList.add('hidden');
+                    p.classList.remove('active');
+                });
+
+                newTab.classList.add('active');
+                const targetPane = document.getElementById(`crm-tab-${newTab.dataset.tab}`);
+                if (targetPane) {
+                    targetPane.classList.remove('hidden');
+                    targetPane.classList.add('active');
+                }
+            });
+        });
+
+        // Ensure history tab is default active on open
+        document.querySelector('.crm-tab[data-tab="history"]')?.click();
+
+        // Load Reservation History
         const historyEl = document.getElementById('crm-history');
-        historyEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+        historyEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading history...</div>';
         try {
             const res = await fetch(`${API}/api/reservations`, { headers: { 'Authorization': `Bearer ${authToken}` } });
             const reservations = await res.json();
-            if (!reservations.length) {
+            if (!reservations || !reservations.length) {
                 historyEl.innerHTML = '<div class="crm-empty"><i class="fa-solid fa-calendar-xmark"></i><p>No reservations yet.</p></div>';
             } else {
                 historyEl.innerHTML = reservations.map(r => {
@@ -328,6 +366,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) {
             historyEl.innerHTML = '<div class="crm-empty">Could not load history.</div>';
+        }
+
+        // Load Billing Info
+        const billingEl = document.getElementById('crm-billing-info');
+        billingEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading billing...</div>';
+        try {
+            const res = await fetch(`${API}/api/user/billing`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const data = await res.json();
+            if (!data.paymentMethods || !data.paymentMethods.length) {
+                billingEl.innerHTML = '<div class="crm-empty"><i class="fa-solid fa-credit-card"></i><p>No payment methods on file.</p></div>';
+            } else {
+                billingEl.innerHTML = data.paymentMethods.map(card => `
+                    <div class="crm-res-card" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <i class="fa-brands fa-cc-${card.brand.toLowerCase()}" style="font-size: 2rem; color: #fff;"></i>
+                            <div>
+                                <div style="font-weight: 600; color: #fff;">•••• •••• •••• ${card.last4}</div>
+                                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Expires ${String(card.exp_month).padStart(2, '0')}/${card.exp_year}</div>
+                            </div>
+                        </div>
+                        <div class="crm-res-status confirmed" style="margin:0;"><i class="fa-solid fa-check"></i> Default</div>
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            billingEl.innerHTML = '<div class="crm-empty">Could not load billing info.</div>';
         }
     }
 

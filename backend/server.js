@@ -246,6 +246,26 @@ app.get('/api/reservations', authMiddleware, async (req, res) => {
     })));
 });
 
+// GET /api/user/billing
+app.get('/api/user/billing', authMiddleware, async (req, res) => {
+    try {
+        const { data: user, error } = await supabase.from('users').select('stripe_customer_id').eq('id', req.user.id).single();
+        if (error || !user?.stripe_customer_id) {
+            return res.json({ paymentMethods: [] });
+        }
+
+        const paymentMethods = await stripe.paymentMethods.list({
+            customer: user.stripe_customer_id,
+            type: 'card',
+        });
+
+        res.json({ paymentMethods: paymentMethods.data.map(pm => pm.card) });
+    } catch (error) {
+        console.error('Error fetching billing info:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Helper to save a completed reservation to Supabase
 async function saveReservation(userId, data) {
     if (!userId) return;
