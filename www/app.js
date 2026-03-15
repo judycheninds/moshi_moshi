@@ -108,12 +108,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let authToken = localStorage.getItem('mm_token') || null;
     let currentUser = JSON.parse(localStorage.getItem('mm_user') || 'null');
 
+    function updateCallBtnState() {
+        const callBtn = document.getElementById('callBtn');
+        const callBtnText = document.getElementById('callBtnText');
+        if (!callBtn || !callBtnText) return;
+
+        if (authToken && currentUser) {
+            callBtn.disabled = false;
+            callBtn.style.opacity = '1';
+            callBtn.style.cursor = 'pointer';
+            callBtnText.textContent = translateStr('btn-call') || 'Initiate AI Call';
+        } else {
+            callBtn.disabled = true;
+            callBtn.style.opacity = '0.5';
+            callBtn.style.cursor = 'not-allowed';
+            callBtnText.textContent = 'Please Login to Call';
+        }
+    }
+
     function setAuth(token, user) {
         authToken = token;
         currentUser = user;
         localStorage.setItem('mm_token', token);
         localStorage.setItem('mm_user', JSON.stringify(user));
         loginBtn.innerHTML = `<span>${user.name}</span> <i class="fa-solid fa-user"></i>`;
+        updateCallBtnState();
     }
 
     function clearAuth() {
@@ -122,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('mm_token');
         localStorage.removeItem('mm_user');
         loginBtn.innerHTML = `<span data-i18n="nav-login">Login / Sign Up</span> <i class="fa-solid fa-arrow-right-to-bracket"></i>`;
+        updateCallBtnState();
         // Clear pre-filled fields
         const nameEl = document.getElementById('userName');
         const phoneEl = document.getElementById('userPhone');
@@ -153,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.innerHTML = `<span>${currentUser.name}</span> <i class="fa-solid fa-user"></i>`;
         fillUserForm(currentUser);
     }
+    updateCallBtnState();
 
 
 
