@@ -753,7 +753,12 @@ app.post('/twilio/gather-result', async (req, res) => {
             - If the restaurant asks for a phone number: say "${callState.userPhone}".
             - If the restaurant asks for a credit card or deposit: politely decline and say you will provide that when you arrive.
             - If you hear hold music or silence: wait patiently and say nothing. If the hold seems very long, say "I'll hold" in ${langName} and wait.
-            - If an IVR automated system asks you to press a number: respond with [PRESS:X] where X is the digit, and speak normally before or after if needed.
+            - **IVR / AUTOMATED PHONE MENU**: If an automated system answers (e.g. "Press 1 for reservations, press 2 for takeout"), you MUST navigate it to reach a human staff member:
+              * Immediately output [PRESS:X] with the number that leads to reservations or front desk (usually 1 or 0).
+              * If the menu offers "press 0 for operator" or "press 0 to speak to staff", ALWAYS choose 0.
+              * If you are unsure which number reaches a human, try 0 first, then 1.
+              * After pressing, say nothing — wait for a human to come on the line before speaking.
+              * Do NOT leave a voicemail via the IVR — always try to reach a live person.
             - If there's background noise and the restaurant is hard to understand: ask them to repeat in ${langName}.
             - If the call seems complete (reservation confirmed OR ended politely): say a natural goodbye in ${langName} only. Nothing in English.
 
@@ -842,14 +847,61 @@ app.post('/twilio/gather-result', async (req, res) => {
             });
         }
     } else {
-        // If the gather timed out or got nothing, just end the call gracefully
-        let hangupMsg = "I will call back later. Goodbye.";
-        if (targetLang.startsWith('ja')) hangupMsg = "また後でかけ直します。失礼します。";
-        if (targetLang.startsWith('ko')) hangupMsg = "나중에 다시 전화드리겠습니다. 감사합니다.";
-        if (targetLang.startsWith('zh')) hangupMsg = "我晚點再打來。再見。";
+        // ── GATHER TIMEOUT / RESTAURANT HUNG UP ─────────────────────────
+        // If we got nothing from gather, the restaurant likely hung up or went silent
+        const attempt = callState ? (callState.attemptCount || 1) : 1;
+        const MAX_ATTEMPTS = 3;
+
+        if (callState && attempt < MAX_ATTEMPTS) {
+            // Restaurant hung up mid-call — schedule a retry
+            const nextAttempt = attempt + 1;
+            const retryDelaySec = 30;
+            broadcastLog(callSid, 'system',
+                `📴 Restaurant disconnected (attempt ${attempt}/${MAX_ATTEMPTS}). Retrying in ${retryDelaySec}s…`);
+
+            setTimeout(async () => {
+                broadcastLog(callSid, 'system', `📞 Placing retry call (attempt ${nextAttempt}/${MAX_ATTEMPTS})…`);
+                try {
+                    await placeCall({
+                        phone: callState.restaurantPhone,
+                        userName: callState.userName,
+                        userPhone: callState.userPhone,
+                        date: callState.rawDate,
+                        time: callState.rawTime,
+                        altTime1: callState.altTime1,
+                        altTime2: callState.altTime2,
+                        people: callState.rawPeople,
+                        language: callState.language,
+                        uiLanguage: callState.uiLanguage,
+                        userId: callState.userId,
+                        scheduledCallId: callState.scheduledCallId
+                    }, nextAttempt);
+                } catch (e) {
+                    console.error('Hangup retry failed:', e.message);
+                    broadcastLog(callSid, 'system', `❌ Retry ${nextAttempt} failed: ${e.message}`);
+                    broadcastLog(callSid, 'status', JSON.stringify({ type: 'failed', notes: e.message }));
+                }
+            }, retryDelaySec * 1000);
+        } else {
+            // All retries exhausted after repeated hangups
+            const note = `Restaurant disconnected ${MAX_ATTEMPTS} times without completing the reservation.`;
+            broadcastLog(callSid, 'system', `❌ Restaurant hung up ${MAX_ATTEMPTS} times. Giving up.`);
+            broadcastLog(callSid, 'status', JSON.stringify({
+                type: 'failed',
+                notes: note
+            }));
+            if (callState?.userPhone) {
+                await sendStatusSMS(callState.userPhone,
+                    `The restaurant disconnected our call ${MAX_ATTEMPTS} times without completing the booking. Please try calling them directly.`);
+            }
+        }
+
+        let hangupMsg = 'One moment please, I will try again shortly.';
+        if (targetLang.startsWith('ja')) hangupMsg = '少々お待ちください、もう一度おかけします。';
+        if (targetLang.startsWith('ko')) hangupMsg = '잠시만요, 다시 전화드리겠습니다.';
+        if (targetLang.startsWith('zh')) hangupMsg = '請稍等，我馬上再撥。';
         twiml.say({ voice: twilioVoice, language: sayLang }, hangupMsg);
         twiml.hangup();
-        // The /twilio/call-status webhook will automatically trigger evaluation when this hangs up.
     }
 
     res.type('text/xml');
@@ -866,19 +918,30 @@ app.post('/twilio/call-status', async (req, res) => {
     if (!callState) { res.sendStatus(200); return; }
 
     const MAX_ATTEMPTS = 3;
-    const RETRY_DELAY_MS = 3 * 60 * 1000; // 3 minutes
+    const RETRY_DELAY_MS = 30 * 1000; // 30 seconds between retries
 
     // ── NO-ANSWER / BUSY / FAILED → Auto-Retry ──────────────────────────
     if (['no-answer', 'busy', 'failed'].includes(callStatus)) {
         const attempt = callState.attemptCount || 1;
-        broadcastLog(callSid, 'system', `Call ${callStatus} (attempt ${attempt}/${MAX_ATTEMPTS})`);
+
+        // Choose a clear, human-readable reason
+        const reasonMap = {
+            'no-answer': '📵 No one picked up',
+            'busy':      '🔴 Line was busy',
+            'failed':    '⚠️ Call could not be connected'
+        };
+        const reason = reasonMap[callStatus] || callStatus;
+
+        broadcastLog(callSid, 'system', `${reason} (attempt ${attempt}/${MAX_ATTEMPTS})`);
 
         if (attempt < MAX_ATTEMPTS) {
             const nextAttempt = attempt + 1;
-            await sendStatusSMS(callState.userPhone,
-                `Attempt ${attempt}/${MAX_ATTEMPTS}: Restaurant didn't answer. Retrying in 3 minutes...`);
+            const retryInSec = Math.round(RETRY_DELAY_MS / 1000);
+            broadcastLog(callSid, 'system',
+                `🔄 Retrying in ${retryInSec}s… (attempt ${nextAttempt}/${MAX_ATTEMPTS})`);
 
             setTimeout(async () => {
+                broadcastLog(callSid, 'system', `📞 Placing retry call (attempt ${nextAttempt}/${MAX_ATTEMPTS})…`);
                 try {
                     await placeCall({
                         phone: callState.restaurantPhone,
@@ -890,26 +953,38 @@ app.post('/twilio/call-status', async (req, res) => {
                         altTime2: callState.altTime2,
                         people: callState.rawPeople,
                         language: callState.language,
+                        uiLanguage: callState.uiLanguage,
                         userId: callState.userId,
                         scheduledCallId: callState.scheduledCallId
                     }, nextAttempt);
-                    console.log(`🔄 Retry ${nextAttempt} scheduled for ${callState.restaurantPhone}`);
+                    console.log(`🔄 Retry ${nextAttempt} placed for ${callState.restaurantPhone}`);
                 } catch (e) {
                     console.error('Retry failed:', e.message);
+                    broadcastLog(callSid, 'system', `❌ Retry ${nextAttempt} failed: ${e.message}`);
+                    broadcastLog(callSid, 'status', JSON.stringify({
+                        type: 'failed',
+                        notes: `Retry attempt ${nextAttempt} could not be placed: ${e.message}`
+                    }));
                 }
             }, RETRY_DELAY_MS);
 
         } else {
-            // All 3 attempts exhausted
-            broadcastLog(callSid, 'status', 'failed');
+            // All attempts exhausted
+            const finalNote = `Restaurant did not answer after ${MAX_ATTEMPTS} attempts (${reasonMap[callStatus]}). Please try again later or call manually.`;
+            broadcastLog(callSid, 'system', `❌ All ${MAX_ATTEMPTS} attempts failed. Giving up.`);
+            broadcastLog(callSid, 'status', JSON.stringify({
+                type: 'failed',
+                notes: finalNote
+            }));
+
             await sendStatusSMS(callState.userPhone,
-                `We tried calling ${callState.restaurantPhone} 3 times but couldn't reach them. ` +
-                `Please try calling manually or let us know a new time to try.`);
+                `We tried calling ${callState.restaurantPhone} ${MAX_ATTEMPTS} times (${reason}) but couldn't reach them. ` +
+                `Please try again later or schedule a call for a different time.`);
 
             if (callState.scheduledCallId) {
                 await supabase.from('scheduled_calls').update({
                     status: 'no_answer_final',
-                    notes: 'Restaurant did not answer after 3 attempts.'
+                    notes: finalNote
                 }).eq('id', callState.scheduledCallId);
             }
             if (callState.userId) {
@@ -921,7 +996,7 @@ app.post('/twilio/call-status', async (req, res) => {
                     guestName: callState.userName,
                     status: 'no_answer',
                     attemptCount: MAX_ATTEMPTS,
-                    notes: 'Restaurant did not answer after 3 attempts.',
+                    notes: finalNote,
                     callSid
                 });
             }
