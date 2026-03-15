@@ -16,7 +16,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css?v=1.9">
+    <link rel="stylesheet" href="styles.css?v=2.0">
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
@@ -443,6 +443,33 @@
                     <div id="crm-billing-info" class="crm-billing">
                         <div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
                     </div>
+
+                    <!-- Add Payment Method section -->
+                    <div id="addPaymentSection" style="margin-top:1.2rem;">
+                        <button id="addPaymentBtn" class="btn-primary"
+                            style="width:100%; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+                            <i class="fa-solid fa-plus"></i> Add Payment Method
+                        </button>
+
+                        <!-- Stripe card entry form (hidden until button clicked) -->
+                        <div id="stripeCardForm" class="stripe-card-form hidden">
+                            <div class="stripe-card-form-header">
+                                <span>New Payment Method</span>
+                                <button id="cancelAddCard" type="button" class="stripe-cancel-btn"><i
+                                        class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <div id="card-element-mount" class="stripe-card-element"></div>
+                            <div id="card-errors" class="stripe-card-error" role="alert"></div>
+                            <div class="stripe-wallets-hint">
+                                <i class="fa-brands fa-apple-pay"></i>
+                                <i class="fa-brands fa-google-pay"></i>
+                                <span>Supports all major cards, Apple Pay &amp; Google Pay</span>
+                            </div>
+                            <button id="saveCardBtn" class="btn-primary" style="width:100%; margin-top:1rem;">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Payment Method
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -452,8 +479,9 @@
         </div>
     </div>
 
+    <script src="https://js.stripe.com/v3/"></script>
     <script src="i18n.js?v=1.5"></script>
-    <script src="app.js?v=2.7"></script>
+    <script src="app.js?v=2.8"></script>
 </body>
 
 </html>

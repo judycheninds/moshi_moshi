@@ -460,29 +460,138 @@ document.addEventListener('DOMContentLoaded', () => {
 
             billingEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading billing...</div>';
             try {
-                const res = await fetch(`${API}/api/user/billing`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+                const res  = await fetch(`${API}/api/user/billing`, { headers: { 'Authorization': `Bearer ${authToken}` } });
                 const data = await res.json();
 
                 if (!data.paymentMethods || !data.paymentMethods.length) {
-                    billingEl.innerHTML = '<div class="crm-empty"><i class="fa-solid fa-credit-card"></i><p>No payment methods on file.</p></div>';
+                    billingEl.innerHTML = '<div class="crm-empty"><i class="fa-solid fa-credit-card"></i><p>No payment methods on file.</p><p style="font-size:0.8rem; opacity:0.6;">Click "Add Payment Method" below to add a card.</p></div>';
                 } else {
-                    billingEl.innerHTML = data.paymentMethods.map(card => `
-                        <div class="crm-res-card" style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
-                            <div style="display:flex; align-items:center; gap:1rem;">
-                                <i class="fa-brands fa-cc-${(card.brand || 'visa').toLowerCase()}" style="font-size:2rem; color:#fff;"></i>
+                    billingEl.innerHTML = data.paymentMethods.map((card, idx) => `
+                        <div class="crm-res-card crm-card-row" data-pm-id="${card.id}">
+                            <div style="display:flex; align-items:center; gap:1rem; flex:1;">
+                                <i class="fa-brands fa-cc-${(card.brand || 'visa').toLowerCase()} crm-card-brand-icon"></i>
                                 <div>
-                                    <div style="font-weight:600; color:#fff;">•••• •••• •••• ${card.last4}</div>
-                                    <div style="font-size:0.85rem; color:rgba(255,255,255,0.6);">Expires ${String(card.exp_month).padStart(2,'0')}/${card.exp_year}</div>
+                                    <div class="crm-card-number">&bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; ${card.last4}</div>
+                                    <div class="crm-card-exp">Expires ${String(card.exp_month).padStart(2,'0')}/${card.exp_year}</div>
                                 </div>
                             </div>
-                            <div class="crm-res-status confirmed" style="margin:0;"><i class="fa-solid fa-check"></i> Default</div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                ${idx === 0 ? '<div class="crm-res-status confirmed" style="margin:0;"><i class="fa-solid fa-check"></i> Default</div>' : ''}
+                                <button class="crm-remove-card-btn" data-pm-id="${card.id}" title="Remove card">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
                         </div>
                     `).join('');
+
+                    // Wire up remove buttons
+                    billingEl.querySelectorAll('.crm-remove-card-btn').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            const pmId = btn.dataset.pmId;
+                            btn.disabled = true;
+                            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                            try {
+                                await fetch(`${API}/api/user/detach-payment-method`, {
+                                    method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ paymentMethodId: pmId })
+                                });
+                                await loadBilling(); // Refresh
+                            } catch (err) {
+                                btn.disabled = false;
+                                btn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+                            }
+                        });
+                    });
                 }
             } catch (e) {
                 console.error('Billing load error:', e);
                 billingEl.innerHTML = '<div class="crm-empty">Could not load billing info.</div>';
             }
+
+            // ── Add Payment Method flow ──────────────────────────────────
+            setupAddCardFlow(loadBilling);
+        }
+
+        // Sets up the Add Card button + Stripe form. Called each time billing loads.
+        function setupAddCardFlow(onSuccess) {
+            const addBtn      = document.getElementById('addPaymentBtn');
+            const cardForm    = document.getElementById('stripeCardForm');
+            const cancelBtn   = document.getElementById('cancelAddCard');
+            const saveBtn     = document.getElementById('saveCardBtn');
+            const mountEl     = document.getElementById('card-element-mount');
+            const errEl       = document.getElementById('card-errors');
+            if (!addBtn || !cardForm || !mountEl) return;
+
+            let stripeInstance = null, cardElement = null;
+
+            addBtn.addEventListener('click', async () => {
+                cardForm.classList.remove('hidden');
+                addBtn.classList.add('hidden');
+                errEl.textContent = '';
+
+                // Fetch publishable key and create SetupIntent
+                try {
+                    const keyRes = await fetch(`${API}/api/stripe-key`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+                    const { publishableKey } = await keyRes.json();
+
+                    const siRes = await fetch(`${API}/api/user/setup-intent`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }
+                    });
+                    const { clientSecret } = await siRes.json();
+
+                    // Mount Stripe Card Element
+                    stripeInstance = Stripe(publishableKey);
+                    const elements = stripeInstance.elements();
+                    mountEl.innerHTML = '';
+                    cardElement = elements.create('card', {
+                        style: {
+                            base: {
+                                color: '#ffffff',
+                                fontFamily: 'Outfit, sans-serif',
+                                fontSize: '15px',
+                                '::placeholder': { color: 'rgba(255,255,255,0.4)' },
+                                iconColor: '#ffffff'
+                            },
+                            invalid: { color: '#ff6b6b' }
+                        }
+                    });
+                    cardElement.mount(mountEl);
+                    cardElement.on('change', e => { errEl.textContent = e.error ? e.error.message : ''; });
+
+                    // Save handler
+                    const savedClientSecret = clientSecret;
+                    saveBtn.onclick = async () => {
+                        saveBtn.disabled = true;
+                        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+                        const { error } = await stripeInstance.confirmCardSetup(savedClientSecret, {
+                            payment_method: { card: cardElement }
+                        });
+                        if (error) {
+                            errEl.textContent = error.message;
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Payment Method';
+                        } else {
+                            // Success — hide form, reload billing list
+                            cardForm.classList.add('hidden');
+                            addBtn.classList.remove('hidden');
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Payment Method';
+                            await onSuccess();
+                        }
+                    };
+                } catch (err) {
+                    errEl.textContent = 'Could not initialize payment form. Please try again.';
+                    console.error('Stripe setup error:', err);
+                }
+            });
+
+            cancelBtn?.addEventListener('click', () => {
+                cardForm.classList.add('hidden');
+                addBtn.classList.remove('hidden');
+                if (cardElement) { cardElement.unmount(); cardElement = null; }
+            });
         }
 
         // Auto-load history on open

@@ -241,6 +241,7 @@ app.get('/api/reservations', authMiddleware, async (req, res) => {
     })));
 });
 
+
 // GET /api/user/billing
 app.get('/api/user/billing', authMiddleware, async (req, res) => {
     try {
@@ -254,12 +255,71 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
             type: 'card',
         });
 
-        res.json({ paymentMethods: paymentMethods.data.map(pm => pm.card) });
+        // Return id + card details so frontend can display and remove cards
+        res.json({ paymentMethods: paymentMethods.data.map(pm => ({
+            id: pm.id,
+            brand: pm.card.brand,
+            last4: pm.card.last4,
+            exp_month: pm.card.exp_month,
+            exp_year: pm.card.exp_year,
+        })) });
     } catch (error) {
         console.error('Error fetching billing info:', error);
         res.status(500).json({ error: error.message });
     }
 });
+
+// GET /api/stripe-key — expose publishable key to frontend
+app.get('/api/stripe-key', authMiddleware, (req, res) => {
+    res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
+});
+
+// POST /api/user/setup-intent — create a SetupIntent to add a payment method
+app.post('/api/user/setup-intent', authMiddleware, async (req, res) => {
+    try {
+        const { data: user, error } = await supabase.from('users').select('stripe_customer_id, name, email').eq('id', req.user.id).single();
+        if (error) throw error;
+
+        let customerId = user?.stripe_customer_id;
+
+        // Auto-create Stripe customer if they don't have one yet
+        if (!customerId) {
+            const customer = await stripe.customers.create({
+                name:  user?.name  || req.user.name  || '',
+                email: user?.email || req.user.email || '',
+                metadata: { supabase_id: req.user.id }
+            });
+            customerId = customer.id;
+            await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', req.user.id);
+        }
+
+        const setupIntent = await stripe.setupIntents.create({
+            customer: customerId,
+            payment_method_types: ['card'],
+            usage: 'off_session',   // needed for restaurant deposits
+        });
+
+        res.json({ clientSecret: setupIntent.client_secret, customerId });
+    } catch (err) {
+        console.error('Setup intent error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/user/detach-payment-method — remove a saved card
+app.post('/api/user/detach-payment-method', authMiddleware, async (req, res) => {
+    try {
+        const { paymentMethodId } = req.body;
+        if (!paymentMethodId) return res.status(400).json({ error: 'paymentMethodId required' });
+
+        await stripe.paymentMethods.detach(paymentMethodId);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Detach error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 // Helper to save a completed reservation to Supabase
 async function saveReservation(userId, data) {
