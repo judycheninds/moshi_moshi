@@ -512,10 +512,11 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
 
-            // Double-check: user must be logged in (call.html already gates this, but just in case)
+            // Hard auth check — if not logged in, abort completely
             if (!authToken || !currentUser) {
-                window.location.href = 'index.html';
-                return;
+                e.stopImmediatePropagation();
+                updateCallBtnState();
+                return false;
             }
 
             startCallSimulation();
@@ -527,14 +528,13 @@ document.addEventListener('DOMContentLoaded', () => {
             agentContainer.classList.remove('calling');
             callLogContainer.innerHTML = `<div class="log-entry system">${translateStr('call-log-default')}</div>`;
 
-            // Reset form
-            btnText.textContent = translateStr('btn-call');
-            callBtn.disabled = false;
-            callBtn.style.opacity = '1';
+            // Reset form visuals, but respect auth state for the button
             btnLoader.classList.add('hidden');
             btnText.classList.remove('hidden');
             form.reset();
             dateInput.value = today;
+            // Let updateCallBtnState decide if button should be enabled or not
+            updateCallBtnState();
         });
 
         document.getElementById('rebookBtn')?.addEventListener('click', () => {
