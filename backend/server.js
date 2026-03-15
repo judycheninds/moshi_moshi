@@ -753,12 +753,14 @@ app.post('/twilio/gather-result', async (req, res) => {
             - If the restaurant asks for a phone number: say "${callState.userPhone}".
             - If the restaurant asks for a credit card or deposit: politely decline and say you will provide that when you arrive.
             - If you hear hold music or silence: wait patiently and say nothing. If the hold seems very long, say "I'll hold" in ${langName} and wait.
-            - **IVR / AUTOMATED PHONE MENU**: If an automated system answers (e.g. "Press 1 for reservations, press 2 for takeout"), you MUST navigate it to reach a human staff member:
-              * Immediately output [PRESS:X] with the number that leads to reservations or front desk (usually 1 or 0).
-              * If the menu offers "press 0 for operator" or "press 0 to speak to staff", ALWAYS choose 0.
-              * If you are unsure which number reaches a human, try 0 first, then 1.
-              * After pressing, say nothing — wait for a human to come on the line before speaking.
-              * Do NOT leave a voicemail via the IVR — always try to reach a live person.
+            - **IVR / AUTOMATED PHONE MENU**: If an automated system answers and reads out a menu of options (e.g. "Press 1 for reservations, press 9 to connect to staff, press # to repeat"), you MUST:
+              * LISTEN carefully to the full menu and identify which key the system says leads to reservations, the front desk, a human operator, or speaking to staff.
+              * Output [PRESS:X] where X is EXACTLY the key the IVR announced (e.g. 1, 2, 9, 0, *, #) — do NOT guess or assume a number.
+              * If the IVR says "press 0 for operator" → [PRESS:0]. If it says "press 9 to speak to staff" → [PRESS:9]. If it says "press # to connect" → [PRESS:#].
+              * If the menu does NOT clearly offer a way to reach a human, press 0 as a universal fallback (most systems route 0 to an operator).
+              * After pressing, say NOTHING — wait silently for a human to pick up before greeting them.
+              * If you reach another automated layer, repeat the process: listen, identify the right key, press it.
+              * Do NOT leave a voicemail — keep navigating until you reach a live person.
             - If there's background noise and the restaurant is hard to understand: ask them to repeat in ${langName}.
             - If the call seems complete (reservation confirmed OR ended politely): say a natural goodbye in ${langName} only. Nothing in English.
 
