@@ -8,6 +8,10 @@
     <meta name="description"
         content="AI agent that calls Japanese restaurants and speaks Japanese on your behalf to secure reservations.">
     <meta name="theme-color" content="#ea2e49">
+    <!-- Never cache this page -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
         rel="stylesheet">
@@ -24,8 +28,13 @@
     <script>
         (function () {
             var token = localStorage.getItem('mm_token');
-            var user = localStorage.getItem('mm_user');
-            if (!token || !user || user === 'null') {
+            var userStr = localStorage.getItem('mm_user');
+            var user = null;
+            try { user = JSON.parse(userStr); } catch (e) { }
+            // Require both a token AND a valid user object with an email or name
+            if (!token || !user || !user.email) {
+                localStorage.removeItem('mm_token');
+                localStorage.removeItem('mm_user');
                 window.location.replace('index.html');
             }
         })();

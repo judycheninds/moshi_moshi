@@ -109,11 +109,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = JSON.parse(localStorage.getItem('mm_user') || 'null');
 
     function updateCallBtnState() {
+        const isLoggedIn = !!(authToken && currentUser && currentUser.email);
+
         // Handle call.html specific button
         const callBtn = document.getElementById('callBtn');
         const callBtnText = document.getElementById('callBtnText');
         if (callBtn && callBtnText) {
-            if (authToken && currentUser) {
+            if (isLoggedIn) {
                 callBtn.disabled = false;
                 callBtn.style.opacity = '1';
                 callBtn.style.cursor = 'pointer';
@@ -130,16 +132,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Handle index.html specific links (disabling them visually instead of just intercepting)
+        // Handle index.html links to call.html
         document.querySelectorAll('a[href="call.html"]').forEach(link => {
-            if (authToken && currentUser) {
+            if (isLoggedIn) {
                 link.style.opacity = '1';
                 link.style.pointerEvents = 'auto';
                 link.style.cursor = 'pointer';
             } else {
                 link.style.opacity = '0.5';
                 link.style.cursor = 'not-allowed';
-                // Note: we don't disable pointerEvents here so the interceptor can catch clicks and show the modal!
             }
         });
     }
@@ -478,7 +479,8 @@ document.addEventListener('DOMContentLoaded', () => {
         modeSchedBtn.classList.toggle('active', mode === 'schedule');
         schedPickerWrap.classList.toggle('hidden', mode === 'now');
         if (callBtnText) {
-            if (authToken && currentUser) {
+            const isLoggedIn = !!(authToken && currentUser && currentUser.email);
+            if (isLoggedIn) {
                 const textKey = mode === 'now' ? 'btn-call' : 'btn-schedule';
                 callBtnText.setAttribute('data-i18n', textKey);
                 callBtnText.textContent = translateStr(textKey) || (mode === 'now' ? 'Initiate AI Call' : '📅 Schedule Call');
@@ -512,8 +514,8 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
 
-            // Hard auth check — if not logged in, abort completely
-            if (!authToken || !currentUser) {
+            // Hard auth check — require a valid user with email
+            if (!authToken || !currentUser || !currentUser.email) {
                 e.stopImmediatePropagation();
                 updateCallBtnState();
                 return false;
