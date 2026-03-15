@@ -982,58 +982,9 @@ app.post('/twilio/call-status', async (req, res) => {
             console.log('[Eval] Agent said goodbye without booking:', agentSaidGoodbyeWithoutBooking);
             console.log('[Eval] Restaurant said unavailable:', restaurantSaidFull);
 
-            // Extract proposed alternative times from the RESTAURANT's messages
-            // Use a regex that captures HH:MM or H am/pm format
-            const timeRegex = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/gi;
-            const originalHour = parseInt((callState.rawTime || '00:00').split(':')[0]);
-            const originalMin = parseInt((callState.rawTime || '00:00').split(':')[1] || '0');
-
-            const foundTimes = new Map(); // deduplicate by normalized time
-            let match;
-            while ((match = timeRegex.exec(allRestaurantText)) !== null) {
-                let h = parseInt(match[1]);
-                const m = parseInt(match[2] || '0');
-                const meridian = (match[3] || '').toLowerCase();
-                if (meridian === 'pm' && h < 12) h += 12;
-                if (meridian === 'am' && h === 12) h = 0;
-                if (h < 1 || h > 23) continue; // skip nonsense numbers
-                const key = `${h}:${String(m).padStart(2, '0')}`;
-                // Don't include the original requested time
-                if (h === originalHour && m === originalMin) continue;
-                // Format nicely: "12:30 PM" style
-                const displayH = h > 12 ? h - 12 : h === 0 ? 12 : h;
-                const suffix = h >= 12 ? 'PM' : 'AM';
-                const displayTime = m === 0 ? `${displayH}:00 ${suffix}` : `${displayH}:${String(m).padStart(2, '0')} ${suffix}`;
-                foundTimes.set(key, displayTime);
-            }
-            const proposedTimes = [...foundTimes.values()];
-            console.log('[Eval] Proposed alt times found:', proposedTimes);
-
-
             if (agentSaidGoodbyeWithoutBooking || restaurantSaidFull) {
-                const altStr = proposedTimes.length > 0 ? proposedTimes.join(' or ') : null;
-                console.log('[Eval] PRE-CHECK failed — agent left without booking. Alternatives:', altStr);
-                const statusType = altStr ? 'alternative' : 'failed';
-                broadcastLog(callSid, 'status', JSON.stringify({
-                    type: statusType,
-                    confirmedTime: null,
-                    alternatives: altStr,
-                    notes: 'Restaurant was unavailable at the requested time.'
-                }));
-                if (altStr) broadcastLog(callSid, 'agent', `💡 Alternatives: ${altStr}`);
-                // Still save to CRM
-                if (callState.userId) {
-                    saveReservation(callState.userId, {
-                        restaurantPhone: callState.restaurantPhone,
-                        date: callState.rawDate, time: callState.rawTime,
-                        people: callState.rawPeople, guestName: callState.userName,
-                        status: 'failed', attemptCount: callState.attemptCount || 1,
-                        alternatives: altStr, notes: 'Restaurant unavailable at requested time.', callSid
-                    });
-                }
-                activeCalls.delete(callSid);
-                res.sendStatus(200);
-                return;
+                console.log('[Eval] PRE-CHECK: Agent ended call without booking or restaurant is full. Passing to Gemini to find alternatives.');
+                // Do NOT return here. Continue downwards to run the Gemini `evalPrompt` so Gemini can use context to figure out if it's a real alternative or just a phone number.
             }
             // ── END PRE-CHECK ──
 
