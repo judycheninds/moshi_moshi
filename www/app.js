@@ -760,12 +760,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof statusInfo === 'string' && statusInfo.startsWith('{')) {
                 try {
                     const parsed = JSON.parse(statusInfo);
-                    isSuccess = parsed.type === 'success';
-                    isAlternative = parsed.type === 'alternative';
-                    alternatives = parsed.alternatives;
-                    confirmedTime = parsed.confirmedTime;
-                    notes = parsed.notes;
-                    depositInfo = parsed.deposit || null;   // { requested, amount, currency, charged, error }
+                    isSuccess      = parsed.type === 'success';
+                    isAlternative  = parsed.type === 'alternative';
+                    // Prefer localized version for display, fall back to English
+                    alternatives   = parsed.alternativesLocalized || parsed.alternatives;
+                    confirmedTime  = parsed.confirmedTime;
+                    notes          = parsed.notesLocalized || parsed.notes;
+                    depositInfo    = parsed.deposit || null;
                 } catch (e) { }
             }
 
@@ -833,7 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultStatusIcon.className = 'result-icon alternative';
                 resultStatusIcon.innerHTML = '<i class="fa-solid fa-calendar-day"></i>';
                 resultTitle.textContent = translateStr('result-title-alt') || 'Alternative Time Offered';
-                resultDesc.textContent = translateStr('alt-offer-desc') || "The requested time wasn't available, but the restaurant suggested another slot:";
+                resultDesc.textContent = translateStr('alt-offer-desc') || "The requested time wasn't available. The restaurant proposed:";
 
                 if (altOfferBox && altOfferText) {
                     altOfferText.textContent = alternatives;
@@ -878,20 +879,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const depositStatus = document.getElementById('depositStatus');
                 if (depositBox) {
                     depositBox.classList.remove('hidden');
-                    const amt = depositInfo.amount
+                    const rawAmt = depositInfo.amount
                         ? `${(depositInfo.amount / 100).toFixed(2)} ${(depositInfo.currency || 'USD').toUpperCase()}`
-                        : 'an amount';
-                    depositDesc.textContent = `The restaurant requested a deposit of ${amt} to hold your reservation.`;
+                        : '';
+                    depositDesc.textContent = (translateStr('deposit-requested-desc') || 'The restaurant requested a deposit of {amt} to hold your reservation.').replace('{amt}', rawAmt || 'an amount');
                     if (depositInfo.charged) {
-                        depositTitle.textContent = '✅ Deposit Charged';
+                        depositTitle.textContent = translateStr('deposit-charged-title') || '✅ Deposit Charged';
                         depositStatus.className  = 'deposit-status deposit-charged';
-                        depositStatus.textContent = `Your card was successfully charged ${amt}.`;
+                        depositStatus.textContent = (translateStr('deposit-charged-body') || 'Your card was successfully charged {amt}.').replace('{amt}', rawAmt);
                     } else {
-                        depositTitle.textContent = '⚠️ Deposit Required — Action Needed';
+                        depositTitle.textContent = translateStr('deposit-pending-title') || '⚠️ Deposit Required — Action Needed';
                         depositStatus.className  = 'deposit-status deposit-pending';
+                        const pendingBody = (translateStr('deposit-pending-body') || 'Please contact the restaurant directly to pay the deposit of {amt}.').replace('{amt}', rawAmt);
                         depositStatus.textContent = depositInfo.error
-                            ? `Charge failed: ${depositInfo.error}. Please contact the restaurant directly to pay the deposit.`
-                            : 'We could not charge your card automatically. Please contact the restaurant to pay the deposit.';
+                            ? `${pendingBody} (${depositInfo.error})`
+                            : pendingBody;
                     }
                 }
             }

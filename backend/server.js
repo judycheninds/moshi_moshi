@@ -1070,9 +1070,14 @@ app.post('/twilio/call-status', async (req, res) => {
             }
             // ── END PRE-CHECK ──
 
+            // Map uiLanguage code to a full language name for Gemini
+            const uiLangNames = { 'en': 'English', 'ja': 'Japanese', 'zh-TW': 'Traditional Chinese', 'zh-CN': 'Simplified Chinese', 'ko': 'Korean' };
+            const uiLangName  = uiLangNames[callState.uiLanguage] || 'English';
+
             const evalPrompt = `
                 You are evaluating a phone call where an AI assistant tried to book a restaurant reservation at ${callState.rawTime} on ${callState.rawDate}.
                 The conversation may be in Japanese, Chinese, Korean, or English — handle all languages.
+                The USER's preferred display language is: ${uiLangName}.
                 
                 CONVERSATION:
                 ${conversation}
@@ -1083,15 +1088,15 @@ app.post('/twilio/call-status', async (req, res) => {
                 - Set "success": TRUE only if the restaurant explicitly said it is CONFIRMED/BOOKED for a specific time AND the agent accepted.
                 - Set "success": FALSE if the restaurant said they are full, no availability, or proposed ANY different time WITHOUT the agent explicitly confirming a booking.
                 - Set "success": FALSE if the agent said they need to "check with the client" or ended the call without a firm booking.
-                
-                ALTERNATIVE TIME EXTRACTION — this is critical:
+                                ALTERNATIVE TIME EXTRACTION — this is critical:
                 - Read the FULL conversation carefully, including Japanese/Chinese/Korean text.
                 - If the restaurant mentioned ANY specific time(s) that they DO have available (e.g. "18時はいかがですか", "下午6點可以嗎", "오후 6시는 어떠세요", "how about 6pm"), extract ALL of them.
                 - Normalize extracted times to a clear English format like "6:00 PM" or "6:00 PM and 7:30 PM".
                 - If the agent repeated the time back (e.g. "so you have availability at 6:00 PM?"), use that confirmed time as the alternative.
-                - Set "alternatives" to a clear, readable English string of all proposed times, e.g. "6:00 PM" or "11:00 AM and 2:00 PM".
+                - Set "alternatives" ALWAYS in English (e.g. "6:00 PM").
+                - Set "alternativesLocalized" as the same time(s) written naturally in ${uiLangName} (e.g. for Traditional Chinese: "晚上6點", for Japanese: "午後6時").
                 - Do NOT confuse voicemail messages or system error phone numbers as alternative times.
-                - If no alternative was proposed, set "alternatives" to null.
+                - If no alternative was proposed, set both "alternatives" and "alternativesLocalized" to null.
                 
                 DEPOSIT: If the restaurant asked for any deposit, prepayment, or credit card hold, set "depositRequested": true and "depositAmount" to the amount in smallest currency unit (e.g. 1000 for $10.00). If no deposit was mentioned, set "depositRequested": false.
                 
@@ -1100,7 +1105,9 @@ app.post('/twilio/call-status', async (req, res) => {
                   "success": true or false,
                   "confirmedTime": "the actual confirmed time string if success=true, otherwise null",
                   "alternatives": "clear English string of alternative time(s) the restaurant offered, or null",
+                  "alternativesLocalized": "same alternative time(s) written naturally in ${uiLangName}, or null",
                   "notes": "one sentence summary in English of what happened",
+                  "notesLocalized": "same summary written naturally in ${uiLangName}",
                   "depositRequested": true or false,
                   "depositAmount": number in smallest currency unit or null
                 }
@@ -1209,8 +1216,10 @@ app.post('/twilio/call-status', async (req, res) => {
                 type: statusType,
                 confirmedTime: evalResult.confirmedTime,
                 alternatives: evalResult.alternatives,
+                alternativesLocalized: evalResult.alternativesLocalized || null,
                 notes: evalResult.notes,
-                deposit: depositResult   // null if no deposit was requested
+                notesLocalized: evalResult.notesLocalized || null,
+                deposit: depositResult
             }));
 
             if (evalResult.alternatives) broadcastLog(callSid, 'agent', `💡 Alternatives: ${evalResult.alternatives}`);
