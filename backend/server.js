@@ -122,7 +122,8 @@ const publicUrl = process.env.PUBLIC_URL || '';
 // ==========================================
 // AUTH & CRM — Supabase PostgreSQL
 // ==========================================
-const JWT_SECRET = process.env.JWT_SECRET || 'moshi-moshi-secret-2025';
+// Secret updated to forcefully expire old debug tokens
+const JWT_SECRET = process.env.JWT_SECRET || 'moshi-moshi-secret-reset-777';
 
 // Auth Middleware
 function authMiddleware(req, res, next) {
@@ -1029,6 +1030,13 @@ app.post('/twilio/call-status', async (req, res) => {
                 console.error('[Eval] JSON parse failed, raw text was:', rawText);
                 // Only fall back to text search if truly unparseable
                 evalResult.success = false; // Default to failure — safer than false positives
+            }
+
+            // Hardcode network/voicemail error overrides to prevent any AI hallucination of alternatives
+            if (allRestaurantText.match(/not available|voicemail|answering machine|0\s*4\s*7\s*6\s*4\s*5|unallocated|leave a message/i)) {
+                evalResult.alternatives = null;
+                evalResult.success = false;
+                evalResult.notes = "The restaurant's phone number was not available or reached an automated voicemail.";
             }
 
             const isSuccess = evalResult.success === true;

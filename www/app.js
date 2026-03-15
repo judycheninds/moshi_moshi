@@ -154,7 +154,40 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('reservationFormContainer')?.classList.remove('hidden');
     }
 
-    // Set up new login prompt button
+    // Initialize Call Page Routing
+    const showCallPage = () => {
+        document.querySelector('.hero')?.classList.add('hidden');
+        document.getElementById('how-it-works')?.classList.add('hidden');
+        const resSection = document.getElementById('reservation');
+        if (resSection) {
+            resSection.classList.remove('hidden');
+            resSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
+    const showLandingPage = () => {
+        document.querySelector('.hero')?.classList.remove('hidden');
+        document.getElementById('how-it-works')?.classList.remove('hidden');
+        document.getElementById('reservation')?.classList.add('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    document.getElementById('heroStartBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!authToken || !currentUser) {
+            loginModal.classList.remove('hidden');
+            window._pendingCallPage = true; // Mark intent so we can auto-forward on successful login
+        } else {
+            showCallPage();
+        }
+    });
+
+    document.getElementById('navLogoBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showLandingPage();
+    });
+
+    // Set up new login prompt button inside the call page (if accessed without hero CTA)
     document.getElementById('loginPromptBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
         document.getElementById('loginModal').classList.remove('hidden');
@@ -281,10 +314,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             loginModal.classList.add('hidden');
             loginForm.reset();
-            modalSubmitBtn.disabled = false;
             modalSubmitBtn.innerHTML = originalText;
             // Fill reservation form with user info after modal closes
-            setTimeout(() => fillUserForm(currentUser), 300);
+            setTimeout(() => {
+                fillUserForm(currentUser);
+                if (window._pendingCallPage) {
+                    showCallPage();
+                    window._pendingCallPage = false;
+                }
+            }, 300);
         } catch (err) {
             showModalError('Network error. Please try again.');
             modalSubmitBtn.disabled = false;

@@ -32,7 +32,7 @@
     <!-- Navigation -->
     <nav class="navbar" id="navbar">
         <div class="container nav-content">
-            <a href="#" class="logo">
+            <a href="#" class="logo" id="navLogoBtn">
                 <i class="fa-solid fa-phone-volume"></i> Moshi<span class="highlight">Moshi</span> <span
                     class="jp-logo">もしもし</span>
             </a>
@@ -68,7 +68,8 @@
                         and secures your
                         table. Never worry about language barriers again.</p>
                     <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                        <a href="#reservation" class="btn-primary cta-btn" data-i18n="hero-btn">Start Calling Now</a>
+                        <a href="#" id="heroStartBtn" class="btn-primary cta-btn" data-i18n="hero-btn">Start Calling
+                            Now</a>
                         <button class="btn-secondary download-btn"
                             style="border-width: 2px; font-size: 1.1rem; padding: 0.8rem 1.8rem;"><i
                                 class="fa-solid fa-download"></i> <span data-i18n="nav-download">Download
@@ -111,8 +112,8 @@
             </div>
         </section>
 
-        <!-- Reservation Tool Section -->
-        <section id="reservation" class="reservation-section">
+        <!-- Reservation Tool Section (Hidden until Next Page) -->
+        <section id="reservation" class="reservation-section hidden">
             <div class="container">
                 <div class="reservation-wrapper">
                     <!-- Left: Form -->
