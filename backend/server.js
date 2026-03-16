@@ -1099,9 +1099,11 @@ app.post('/twilio/call-status', async (req, res) => {
             console.log('[Eval] Agent said goodbye without booking:', agentSaidGoodbyeWithoutBooking);
             console.log('[Eval] Restaurant said unavailable:', restaurantSaidFull);
 
-            if (agentSaidGoodbyeWithoutBooking || restaurantSaidFull) {
+            if (!callState.isRebook && (agentSaidGoodbyeWithoutBooking || restaurantSaidFull)) {
                 console.log('[Eval] PRE-CHECK: Agent ended call without booking or restaurant is full. Passing to Gemini to find alternatives.');
                 // Do NOT return here. Continue downwards to run the Gemini `evalPrompt` so Gemini can use context to figure out if it's a real alternative or just a phone number.
+            } else if (callState.isRebook && agentSaidGoodbyeWithoutBooking) {
+                console.log('[Eval] PRE-CHECK: Agent ended rebook call without booking. Passing to Gemini.');
             }
             // ── END PRE-CHECK ──
 
