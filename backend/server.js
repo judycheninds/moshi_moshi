@@ -1117,11 +1117,11 @@ app.post('/twilio/call-status', async (req, res) => {
                 CONVERSATION:
                 ${conversation}
                 
-                Your task: determine whether the reservation was ACTUALLY CONFIRMED for the ORIGINALLY requested time (${callState.rawTime}).
+                Your task: determine whether the reservation was ACTUALLY CONFIRMED for the requested time (${callState.rawTime}).
                 
                 CRITICAL RULES — read carefully:
-                - Set "success": TRUE only if the restaurant explicitly said it is CONFIRMED/BOOKED for a specific time AND the agent accepted.
-                - Set "success": FALSE if the restaurant said they are full, no availability, or proposed ANY different time WITHOUT the agent explicitly confirming a booking.
+                - Set "success": TRUE if the restaurant explicitly said it is CONFIRMED/BOOKED for the requested time AND/OR the agent clearly accepted and confirmed the booking details.
+                - Set "success": FALSE if the restaurant said they are full, no availability, or proposed ANY different time WITHOUT the agent explicitly agreeing and finalizing a booking.
                 - Set "success": FALSE if the agent said they need to "check with the client" or ended the call without a firm booking.
                                 ALTERNATIVE TIME EXTRACTION — this is critical:
                 - Read the FULL conversation carefully, including Japanese/Chinese/Korean text.
