@@ -427,15 +427,15 @@
                     <div class="crm-profile-form">
                         <div class="form-group">
                             <label><i class="fa-solid fa-user"></i> Name</label>
-                            <input type="text" id="crm-edit-name" readonly>
+                            <input type="text" id="crm-edit-name">
                         </div>
                         <div class="form-group">
                             <label><i class="fa-solid fa-envelope"></i> Email</label>
-                            <input type="email" id="crm-edit-email" readonly>
+                            <input type="email" id="crm-edit-email">
                         </div>
                         <div class="form-group">
                             <label><i class="fa-solid fa-mobile-screen"></i> Phone Number</label>
-                            <input type="tel" id="crm-edit-phone" readonly>
+                            <input type="tel" id="crm-edit-phone">
                         </div>
                     </div>
                 </div>
@@ -466,6 +466,11 @@
                             </div>
 
                             <!-- Separate labeled card fields -->
+                            <div class="stripe-field-group">
+                                <label class="stripe-label"><i class="fa-solid fa-user"></i> Name on Card</label>
+                                <input id="cardNameInput" type="text" class="stripe-name-input"
+                                    placeholder="Full name as on card" autocomplete="cc-name" spellcheck="false">
+                            </div>
                             <div class="stripe-field-group">
                                 <label class="stripe-label"><i class="fa-solid fa-credit-card"></i> Card Number</label>
                                 <div id="cardNumberEl" class="stripe-card-element"></div>

@@ -1613,17 +1613,29 @@ footer {
     color: #fff;
 }
 
-.stripe-card-element {
+.stripe-card-element,
+.stripe-name-input {
     background: rgba(255, 255, 255, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 10px;
     padding: 14px 12px;
     min-height: 44px;
     transition: border-color 0.2s;
+    width: 100%;
+    color: #ffffff;
+    font-family: "Outfit", sans-serif;
+    font-size: 15px;
+    box-sizing: border-box;
 }
 
-.stripe-card-element:focus-within {
+.stripe-name-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.stripe-card-element:focus-within,
+.stripe-name-input:focus {
     border-color: rgba(255, 255, 255, 0.35);
+    outline: none;
 }
 
 .stripe-label {

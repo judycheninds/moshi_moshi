@@ -61,14 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ---- Adults + Kids counter functionality ----
-    const adultsInput   = document.getElementById('adults');
-    const kidsInput     = document.getElementById('kids');
-    const peopleHidden  = document.getElementById('people');   // hidden total
-    const guestTotalEl  = document.getElementById('guestTotalText');
+    const adultsInput = document.getElementById('adults');
+    const kidsInput = document.getElementById('kids');
+    const peopleHidden = document.getElementById('people');   // hidden total
+    const guestTotalEl = document.getElementById('guestTotalText');
 
     function updateGuestTotal() {
         const a = parseInt(adultsInput?.value || 0);
-        const k = parseInt(kidsInput?.value   || 0);
+        const k = parseInt(kidsInput?.value || 0);
         if (peopleHidden) peopleHidden.value = a + k;
         if (guestTotalEl) {
             const parts = [];
@@ -119,7 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ---- Auth State ----
-    const API = 'https://moshi-moshi-8dh6.onrender.com';
+    const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:3000'
+        : 'https://moshi-moshi-8dh6.onrender.com';
     let authToken = localStorage.getItem('mm_token') || null;
     let currentUser = JSON.parse(localStorage.getItem('mm_user') || 'null');
 
@@ -366,12 +368,12 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboard.classList.remove('hidden');
 
         // Load profile header
-        document.getElementById('crm-name').textContent  = currentUser.name;
-        document.getElementById('crm-email').innerHTML   = `<i class="fa-solid fa-envelope"></i> ${currentUser.email}`;
-        document.getElementById('crm-phone').innerHTML   = `<i class="fa-solid fa-phone"></i> ${currentUser.phone || '—'}`;
+        document.getElementById('crm-name').textContent = currentUser.name;
+        document.getElementById('crm-email').innerHTML = `<i class="fa-solid fa-envelope"></i> ${currentUser.email}`;
+        document.getElementById('crm-phone').innerHTML = `<i class="fa-solid fa-phone"></i> ${currentUser.phone || '—'}`;
 
         // Load profile tab inputs
-        document.getElementById('crm-edit-name').value  = currentUser.name;
+        document.getElementById('crm-edit-name').value = currentUser.name;
         document.getElementById('crm-edit-email').value = currentUser.email;
         document.getElementById('crm-edit-phone').value = currentUser.phone || '';
 
@@ -391,12 +393,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 dashboard.querySelectorAll('.crm-tab-pane').forEach(p => {
                     const show = p.id === `crm-tab-${targetName}`;
                     p.classList.toggle('hidden', !show);
-                    p.classList.toggle('active',  show);
+                    p.classList.toggle('active', show);
                 });
 
                 // Lazy load content on first switch to each tab
-                if (targetName === 'history')  loadHistory();
-                if (targetName === 'billing')  loadBilling();
+                if (targetName === 'history') loadHistory();
+                if (targetName === 'billing') loadBilling();
             });
         }
 
@@ -426,12 +428,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                             : '—';
                         const status = (r.status || 'unknown').toLowerCase();
-                        const statusIcon  = status === 'confirmed' ? 'fa-circle-check'
-                                         : status === 'failed'    ? 'fa-circle-xmark'
-                                         : 'fa-calendar-day';
+                        const statusIcon = status === 'confirmed' ? 'fa-circle-check'
+                            : status === 'failed' ? 'fa-circle-xmark'
+                                : 'fa-calendar-day';
                         const statusLabel = status === 'confirmed' ? 'Confirmed'
-                                          : status === 'failed'    ? 'Failed'
-                                          : status.charAt(0).toUpperCase() + status.slice(1);
+                            : status === 'failed' ? 'Failed'
+                                : status.charAt(0).toUpperCase() + status.slice(1);
                         return `
                          <div class="crm-res-card">
                             <div class="crm-res-status ${status}">
@@ -460,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             billingEl.innerHTML = '<div class="crm-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading billing...</div>';
             try {
-                const res  = await fetch(`${API}/api/user/billing`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+                const res = await fetch(`${API}/api/user/billing`, { headers: { 'Authorization': `Bearer ${authToken}` } });
                 const data = await res.json();
 
                 if (!data.paymentMethods || !data.paymentMethods.length) {
@@ -472,7 +474,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <i class="fa-brands fa-cc-${(card.brand || 'visa').toLowerCase()} crm-card-brand-icon"></i>
                                 <div>
                                     <div class="crm-card-number">&bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; ${card.last4}</div>
-                                    <div class="crm-card-exp">Expires ${String(card.exp_month).padStart(2,'0')}/${card.exp_year}</div>
+                                    ${card.name ? `<div class="crm-card-holder">${card.name}</div>` : ''}
+                                    <div class="crm-card-exp">Expires ${String(card.exp_month).padStart(2, '0')}/${card.exp_year}</div>
                                 </div>
                             </div>
                             <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -522,11 +525,11 @@ document.addEventListener('DOMContentLoaded', () => {
             _addCardReady = true;
             let _successCallback = onSuccessCallback;
 
-            const addBtn   = document.getElementById('addPaymentBtn');
+            const addBtn = document.getElementById('addPaymentBtn');
             const cardForm = document.getElementById('stripeCardForm');
             const cancelBtn = document.getElementById('cancelAddCard');
-            const saveBtn  = document.getElementById('saveCardBtn');
-            const errEl    = document.getElementById('card-errors');
+            const saveBtn = document.getElementById('saveCardBtn');
+            const errEl = document.getElementById('card-errors');
             if (!addBtn || !cardForm) return;
 
             let stripeInst = null, numEl = null, expEl = null, cvcEl = null;
@@ -579,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     numEl = elements.create('cardNumber', { style: CARD_STYLE, showIcon: true });
                     expEl = elements.create('cardExpiry', { style: CARD_STYLE });
-                    cvcEl = elements.create('cardCvc',    { style: CARD_STYLE });
+                    cvcEl = elements.create('cardCvc', { style: CARD_STYLE });
 
                     numEl.mount('#cardNumberEl');
                     expEl.mount('#cardExpiryEl');
@@ -626,10 +629,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // ── 5. Save button for manual card ────────────────────
                     saveBtn.onclick = async () => {
+                        const cardName = (document.getElementById('cardNameInput')?.value || '').trim();
+                        if (!cardName) {
+                            if (errEl) errEl.textContent = 'Please enter the name on your card.';
+                            return;
+                        }
                         saveBtn.disabled = true;
                         saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
                         const { setupIntent, error } = await stripeInst.confirmCardSetup(clientSecret, {
-                            payment_method: { card: numEl }
+                            payment_method: {
+                                card: numEl,
+                                billing_details: { name: cardName }
+                            }
                         });
                         if (error) {
                             if (errEl) errEl.textContent = error.message;
@@ -823,9 +834,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const time = document.getElementById('time').value;
             const altTime1 = document.getElementById('altTime1').value;
             const altTime2 = document.getElementById('altTime2').value;
-            const people   = document.getElementById('people').value;
-            const adults   = document.getElementById('adults')?.value || people;
-            const kids     = document.getElementById('kids')?.value   || '0';
+            const people = document.getElementById('people').value;
+            const adults = document.getElementById('adults')?.value || people;
+            const kids = document.getElementById('kids')?.value || '0';
 
             callLogContainer.innerHTML = '';
             addLog(translateStr('init-agent'), 'system');
@@ -952,13 +963,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof statusInfo === 'string' && statusInfo.startsWith('{')) {
                 try {
                     const parsed = JSON.parse(statusInfo);
-                    isSuccess      = parsed.type === 'success';
-                    isAlternative  = parsed.type === 'alternative';
+                    isSuccess = parsed.type === 'success';
+                    isAlternative = parsed.type === 'alternative';
                     // Prefer localized version for display, fall back to English
-                    alternatives   = parsed.alternativesLocalized || parsed.alternatives;
-                    confirmedTime  = parsed.confirmedTime;
-                    notes          = parsed.notesLocalized || parsed.notes;
-                    depositInfo    = parsed.deposit || null;
+                    alternatives = parsed.alternativesLocalized || parsed.alternatives;
+                    confirmedTime = parsed.confirmedTime;
+                    notes = parsed.notesLocalized || parsed.notes;
+                    depositInfo = parsed.deposit || null;
                 } catch (e) { }
             }
 
@@ -1065,9 +1076,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Show deposit notification if restaurant requested one
             if (depositInfo && depositInfo.requested) {
-                const depositBox    = document.getElementById('depositBox');
-                const depositTitle  = document.getElementById('depositTitle');
-                const depositDesc   = document.getElementById('depositDesc');
+                const depositBox = document.getElementById('depositBox');
+                const depositTitle = document.getElementById('depositTitle');
+                const depositDesc = document.getElementById('depositDesc');
                 const depositStatus = document.getElementById('depositStatus');
                 if (depositBox) {
                     depositBox.classList.remove('hidden');
@@ -1077,11 +1088,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     depositDesc.textContent = (translateStr('deposit-requested-desc') || 'The restaurant requested a deposit of {amt} to hold your reservation.').replace('{amt}', rawAmt || 'an amount');
                     if (depositInfo.charged) {
                         depositTitle.textContent = translateStr('deposit-charged-title') || '✅ Deposit Charged';
-                        depositStatus.className  = 'deposit-status deposit-charged';
+                        depositStatus.className = 'deposit-status deposit-charged';
                         depositStatus.textContent = (translateStr('deposit-charged-body') || 'Your card was successfully charged {amt}.').replace('{amt}', rawAmt);
                     } else {
                         depositTitle.textContent = translateStr('deposit-pending-title') || '⚠️ Deposit Required — Action Needed';
-                        depositStatus.className  = 'deposit-status deposit-pending';
+                        depositStatus.className = 'deposit-status deposit-pending';
                         const pendingBody = (translateStr('deposit-pending-body') || 'Please contact the restaurant directly to pay the deposit of {amt}.').replace('{amt}', rawAmt);
                         depositStatus.textContent = depositInfo.error
                             ? `${pendingBody} (${depositInfo.error})`

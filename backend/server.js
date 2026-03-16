@@ -132,6 +132,20 @@ function authMiddleware(req, res, next) {
     }
 }
 
+// Helper to reliably get a Stripe customer ID without requiring DB schema changes
+async function getStripeCustomerId(email, name, metadata = {}) {
+    if (!stripe) return null;
+    try {
+        const existing = await stripe.customers.list({ email: email.toLowerCase(), limit: 1 });
+        if (existing.data.length > 0) return existing.data[0].id;
+        const customer = await stripe.customers.create({ email: email.toLowerCase(), name, metadata });
+        return customer.id;
+    } catch (err) {
+        console.error("Stripe resolution error:", err);
+        return null;
+    }
+}
+
 // POST /api/auth/register
 app.post('/api/auth/register', authLimiter, async (req, res) => {
     const { email, password, name, phone } = req.body;
@@ -143,27 +157,18 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const id = `user_${Date.now()}`;
-
-    // Create a Stripe Customer right away so we can store cards against them
-    let stripeCustomerId = null;
+    // Create a Stripe Customer right away implicitly
     try {
-        const customer = await stripe.customers.create({
-            email: email.toLowerCase(),
-            name: name,
-            metadata: { app_user_id: id }
-        });
-        stripeCustomerId = customer.id;
-    } catch (err) {
-        console.error("Warning: Stripe Customer creation failed:", err.message);
-    }
+        await getStripeCustomerId(email, name, { app_user_id: id });
+    } catch (err) { }
 
     const { error } = await supabase.from('users').insert({
-        id, email: email.toLowerCase(), password_hash: passwordHash, name, phone: phone || '', stripe_customer_id: stripeCustomerId
+        id, email: email.toLowerCase(), password_hash: passwordHash, name, phone: phone || ''
     });
     if (error) return res.status(500).json({ error: error.message });
 
     const token = jwt.sign({ id, email: email.toLowerCase(), name }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ success: true, token, user: { id, email: email.toLowerCase(), name, phone: phone || '', stripeCustomerId } });
+    res.json({ success: true, token, user: { id, email: email.toLowerCase(), name, phone: phone || '' } });
 });
 
 // POST /api/auth/login
@@ -198,26 +203,7 @@ app.patch('/api/auth/profile', authMiddleware, async (req, res) => {
     res.json({ success: true, user: data });
 });
 
-// POST /api/create-setup-intent
-app.post('/api/create-setup-intent', authMiddleware, async (req, res) => {
-    try {
-        // Find the matching Stripe Customer ID we saved during registration
-        const { data: user, error } = await supabase.from('users').select('stripe_customer_id').eq('id', req.user.id).single();
-        if (error || !user?.stripe_customer_id) {
-            return res.status(400).json({ error: 'Stripe Customer not found for this user.' });
-        }
-
-        const setupIntent = await stripe.setupIntents.create({
-            customer: user.stripe_customer_id,
-            payment_method_types: ['card'],
-        });
-
-        res.json({ clientSecret: setupIntent.client_secret });
-    } catch (error) {
-        console.error('Error creating SetupIntent:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
+// DEPRECATED API removed to prevent duplicate conflicts
 
 // GET /api/reservations
 app.get('/api/reservations', authMiddleware, async (req, res) => {
@@ -245,24 +231,25 @@ app.get('/api/reservations', authMiddleware, async (req, res) => {
 // GET /api/user/billing
 app.get('/api/user/billing', authMiddleware, async (req, res) => {
     try {
-        const { data: user, error } = await supabase.from('users').select('stripe_customer_id').eq('id', req.user.id).single();
-        if (error || !user?.stripe_customer_id) {
-            return res.json({ paymentMethods: [] });
-        }
+        const customerId = await getStripeCustomerId(req.user.email, req.user.name);
+        if (!customerId) return res.json({ paymentMethods: [] });
 
         const paymentMethods = await stripe.paymentMethods.list({
-            customer: user.stripe_customer_id,
+            customer: customerId,
             type: 'card',
         });
 
         // Return id + card details so frontend can display and remove cards
-        res.json({ paymentMethods: paymentMethods.data.map(pm => ({
-            id: pm.id,
-            brand: pm.card.brand,
-            last4: pm.card.last4,
-            exp_month: pm.card.exp_month,
-            exp_year: pm.card.exp_year,
-        })) });
+        res.json({
+            paymentMethods: paymentMethods.data.map(pm => ({
+                id: pm.id,
+                name: pm.billing_details?.name || null,
+                brand: pm.card.brand,
+                last4: pm.card.last4,
+                exp_month: pm.card.exp_month,
+                exp_year: pm.card.exp_year,
+            }))
+        });
     } catch (error) {
         console.error('Error fetching billing info:', error);
         res.status(500).json({ error: error.message });
@@ -277,21 +264,8 @@ app.get('/api/stripe-key', authMiddleware, (req, res) => {
 // POST /api/user/setup-intent — create a SetupIntent to add a payment method
 app.post('/api/user/setup-intent', authMiddleware, async (req, res) => {
     try {
-        const { data: user, error } = await supabase.from('users').select('stripe_customer_id, name, email').eq('id', req.user.id).single();
-        if (error) throw error;
-
-        let customerId = user?.stripe_customer_id;
-
-        // Auto-create Stripe customer if they don't have one yet
-        if (!customerId) {
-            const customer = await stripe.customers.create({
-                name:  user?.name  || req.user.name  || '',
-                email: user?.email || req.user.email || '',
-                metadata: { supabase_id: req.user.id }
-            });
-            customerId = customer.id;
-            await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', req.user.id);
-        }
+        const customerId = await getStripeCustomerId(req.user.email, req.user.name, { supabase_id: req.user.id });
+        if (!customerId) throw new Error("Could not initialize billing system");
 
         const setupIntent = await stripe.setupIntents.create({
             customer: customerId,
@@ -546,7 +520,7 @@ app.get('/api/call-stream/:callSid', (req, res) => {
 app.post('/api/real-call', authMiddleware, callLimiter, async (req, res) => {
     let { phone, date, time, altTime1, altTime2, people, adults, kids, language, userName, userPhone, uiLanguage, isRebook, acceptedAltTime } = req.body;
     adults = parseInt(adults) || parseInt(people) || 2;
-    kids   = parseInt(kids)   || 0;
+    kids = parseInt(kids) || 0;
     people = adults + kids;   // keep total in sync
 
     // Use logged in user ID
@@ -598,7 +572,7 @@ app.post('/api/real-call', authMiddleware, callLimiter, async (req, res) => {
         // Build a natural party size description for the agent
         const partyParts = [];
         if (adults > 0) partyParts.push(`${adults} adult${adults !== 1 ? 's' : ''}`);
-        if (kids   > 0) partyParts.push(`${kids} child${kids !== 1 ? 'ren' : ''}`);
+        if (kids > 0) partyParts.push(`${kids} child${kids !== 1 ? 'ren' : ''}`);
         const partyDesc = partyParts.join(' and ') || `${people} people`;
 
         let friendlyDate = date;
@@ -1001,8 +975,8 @@ app.post('/twilio/call-status', async (req, res) => {
         // Choose a clear, human-readable reason
         const reasonMap = {
             'no-answer': '📵 No one picked up',
-            'busy':      '🔴 Line was busy',
-            'failed':    '⚠️ Call could not be connected'
+            'busy': '🔴 Line was busy',
+            'failed': '⚠️ Call could not be connected'
         };
         const reason = reasonMap[callStatus] || callStatus;
 
@@ -1133,7 +1107,7 @@ app.post('/twilio/call-status', async (req, res) => {
 
             // Map uiLanguage code to a full language name for Gemini
             const uiLangNames = { 'en': 'English', 'ja': 'Japanese', 'zh-TW': 'Traditional Chinese', 'zh-CN': 'Simplified Chinese', 'ko': 'Korean' };
-            const uiLangName  = uiLangNames[callState.uiLanguage] || 'English';
+            const uiLangName = uiLangNames[callState.uiLanguage] || 'English';
 
             const evalPrompt = `
                 You are evaluating a phone call where an AI assistant tried to book a restaurant reservation at ${callState.rawTime} on ${callState.rawDate}.
@@ -1217,7 +1191,7 @@ app.post('/twilio/call-status', async (req, res) => {
                     for (const m of matches) {
                         const raw = m[0].trim();
                         // Skip the originally requested time to avoid false positives
-                        if (!callState.rawTime || !raw.includes(callState.rawTime.replace(':','').substring(0,2))) {
+                        if (!callState.rawTime || !raw.includes(callState.rawTime.replace(':', '').substring(0, 2))) {
                             foundTimes.add(raw);
                         }
                     }
@@ -1242,17 +1216,22 @@ app.post('/twilio/call-status', async (req, res) => {
 
                 try {
                     if (!stripe) throw new Error('Stripe not configured');
-                    const { data: user } = await supabase.from('users').select('stripe_customer_id').eq('id', callState.userId).single();
-                    if (!user?.stripe_customer_id) throw new Error('No card on file');
 
-                    const pms = await stripe.paymentMethods.list({ customer: user.stripe_customer_id, type: 'card' });
+                    // We must fetch the user to get their email, since this runs in a callback without req.user
+                    const { data: user } = await supabase.from('users').select('email, name').eq('id', callState.userId).single();
+                    if (!user?.email) throw new Error('Could not find user info');
+
+                    const customerId = await getStripeCustomerId(user.email, user.name);
+                    if (!customerId) throw new Error('No mapping to stripe account');
+
+                    const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
                     if (!pms.data.length) throw new Error('No payment method found');
 
                     const depositAmt = evalResult.depositAmount || 1000; // default $10 if amount unknown
                     const pi = await stripe.paymentIntents.create({
                         amount: depositAmt,
                         currency: 'usd',
-                        customer: user.stripe_customer_id,
+                        customer: customerId,
                         payment_method: pms.data[0].id,
                         off_session: true,
                         confirm: true,
@@ -1261,7 +1240,7 @@ app.post('/twilio/call-status', async (req, res) => {
 
                     if (pi.status === 'succeeded') {
                         depositResult.charged = true;
-                        broadcastLog(callSid, 'system', `✅ Deposit of $${(depositAmt/100).toFixed(2)} charged successfully.`);
+                        broadcastLog(callSid, 'system', `✅ Deposit of $${(depositAmt / 100).toFixed(2)} charged successfully.`);
                     } else {
                         depositResult.error = `Payment status: ${pi.status}`;
                         broadcastLog(callSid, 'system', `⚠️ Deposit charge incomplete: ${pi.status}`);
@@ -1314,40 +1293,39 @@ app.post('/twilio/call-status', async (req, res) => {
             let paymentStatusMsg = "";
             let paymentSucceeded = false;
             if (isSuccess && callState.userId) {
-                try {
-                    const { data: user, error } = await supabase.from('users').select('stripe_customer_id').eq('id', callState.userId).single();
-                    if (user && user.stripe_customer_id) {
+                // Charge flow fallback
+                const { data: user, error } = await supabase.from('users').select('email, name').eq('id', callState.userId).single();
+                if (user && user.email) {
+                    try {
+                        const customerId = await getStripeCustomerId(user.email, user.name);
+                        if (customerId) {
+                            const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
+                            if (pms.data.length) {
+                                const depositAmt = 500; // $5.00
+                                const pi = await stripe.paymentIntents.create({
+                                    amount: depositAmt,
+                                    currency: 'usd',
+                                    customer: customerId,
+                                    payment_method: pms.data[0].id,
+                                    off_session: true,
+                                    confirm: true,
+                                    description: `Reservation Fee for ${callState.restaurantPhone} on ${callState.rawDate}`
+                                });
 
-                        // Look for their default payment method
-                        const paymentMethods = await stripe.paymentMethods.list({
-                            customer: user.stripe_customer_id,
-                            type: 'card',
-                        });
-
-                        if (paymentMethods.data.length > 0) {
-                            const paymentIntent = await stripe.paymentIntents.create({
-                                amount: 500, // $5.00
-                                currency: 'usd',
-                                customer: user.stripe_customer_id,
-                                payment_method: paymentMethods.data[0].id,
-                                off_session: true,
-                                confirm: true,
-                                description: `Reservation Fee for ${callState.restaurantPhone} on ${callState.rawDate}`
-                            });
-
-                            if (paymentIntent.status === 'succeeded') {
-                                paymentSucceeded = true;
-                                paymentStatusMsg = "The $5 service fee has been successfully charged.";
-                                // Update DB reservation flag as paid
-                                await supabase.from('reservations').update({ payment_status: 'paid' }).eq('call_sid', callSid);
+                                if (pi.status === 'succeeded') {
+                                    paymentSucceeded = true;
+                                    paymentStatusMsg = "The $5 service fee has been successfully charged.";
+                                    // Update DB reservation flag as paid
+                                    await supabase.from('reservations').update({ payment_status: 'paid' }).eq('call_sid', callSid);
+                                }
+                            } else {
+                                paymentStatusMsg = "No card on file to charge the $5 fee.";
                             }
-                        } else {
-                            paymentStatusMsg = "No card on file to charge the $5 fee.";
                         }
+                    } catch (err) {
+                        console.error("Stripe Charge Error:", err);
+                        paymentStatusMsg = "We couldn't process the $5 service fee but your reservation is still confirmed.";
                     }
-                } catch (err) {
-                    console.error("Stripe Charge Error:", err);
-                    paymentStatusMsg = "We couldn't process the $5 service fee but your reservation is still confirmed.";
                 }
             }
 
