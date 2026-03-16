@@ -513,85 +513,141 @@ document.addEventListener('DOMContentLoaded', () => {
             setupAddCardFlow(loadBilling);
         }
 
-        // Sets up the Add Card button + Stripe form. Called each time billing loads.
-        function setupAddCardFlow(onSuccess) {
-            const addBtn      = document.getElementById('addPaymentBtn');
-            const cardForm    = document.getElementById('stripeCardForm');
-            const cancelBtn   = document.getElementById('cancelAddCard');
-            const saveBtn     = document.getElementById('saveCardBtn');
-            const mountEl     = document.getElementById('card-element-mount');
-            const errEl       = document.getElementById('card-errors');
-            if (!addBtn || !cardForm || !mountEl) return;
+        // Guard: only wire listeners once per modal lifecycle
+        let _addCardReady = false;
 
-            let stripeInstance = null, cardElement = null;
+        function setupAddCardFlow(onSuccessCallback) {
+            // If already wired, just make sure we use the latest callback
+            if (_addCardReady) { _successCallback = onSuccessCallback; return; }
+            _addCardReady = true;
+            let _successCallback = onSuccessCallback;
+
+            const addBtn   = document.getElementById('addPaymentBtn');
+            const cardForm = document.getElementById('stripeCardForm');
+            const cancelBtn = document.getElementById('cancelAddCard');
+            const saveBtn  = document.getElementById('saveCardBtn');
+            const errEl    = document.getElementById('card-errors');
+            if (!addBtn || !cardForm) return;
+
+            let stripeInst = null, numEl = null, expEl = null, cvcEl = null;
+
+            const CARD_STYLE = {
+                base: {
+                    color: '#ffffff',
+                    fontFamily: '"Outfit", sans-serif',
+                    fontSize: '15px',
+                    '::placeholder': { color: 'rgba(255,255,255,0.35)' },
+                    iconColor: '#aaa'
+                },
+                invalid: { color: '#ff6b6b', iconColor: '#ff6b6b' }
+            };
+
+            function resetForm() {
+                cardForm.classList.add('hidden');
+                addBtn.classList.remove('hidden');
+                if (errEl) errEl.textContent = '';
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Save Card Securely'; }
+                if (numEl) { numEl.unmount(); numEl = null; }
+                if (expEl) { expEl.unmount(); expEl = null; }
+                if (cvcEl) { cvcEl.unmount(); cvcEl = null; }
+            }
 
             addBtn.addEventListener('click', async () => {
                 cardForm.classList.remove('hidden');
                 addBtn.classList.add('hidden');
-                errEl.textContent = '';
+                if (errEl) errEl.textContent = '';
 
-                // Fetch publishable key and create SetupIntent
                 try {
-                    const keyRes = await fetch(`${API}/api/stripe-key`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+                    // ── 1. Get publishable key ────────────────────────────
+                    const keyRes = await fetch(`${API}/api/stripe-key`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    if (!keyRes.ok) throw new Error('Could not get Stripe key');
                     const { publishableKey } = await keyRes.json();
 
+                    // ── 2. Create SetupIntent ─────────────────────────────
                     const siRes = await fetch(`${API}/api/user/setup-intent`, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }
                     });
+                    if (!siRes.ok) throw new Error('Could not create setup intent');
                     const { clientSecret } = await siRes.json();
 
-                    // Mount Stripe Card Element
-                    stripeInstance = Stripe(publishableKey);
-                    const elements = stripeInstance.elements();
-                    mountEl.innerHTML = '';
-                    cardElement = elements.create('card', {
-                        style: {
-                            base: {
-                                color: '#ffffff',
-                                fontFamily: 'Outfit, sans-serif',
-                                fontSize: '15px',
-                                '::placeholder': { color: 'rgba(255,255,255,0.4)' },
-                                iconColor: '#ffffff'
-                            },
-                            invalid: { color: '#ff6b6b' }
-                        }
-                    });
-                    cardElement.mount(mountEl);
-                    cardElement.on('change', e => { errEl.textContent = e.error ? e.error.message : ''; });
+                    // ── 3. Mount Stripe Elements ──────────────────────────
+                    stripeInst = Stripe(publishableKey);
+                    const elements = stripeInst.elements();
 
-                    // Save handler
-                    const savedClientSecret = clientSecret;
+                    numEl = elements.create('cardNumber', { style: CARD_STYLE, showIcon: true });
+                    expEl = elements.create('cardExpiry', { style: CARD_STYLE });
+                    cvcEl = elements.create('cardCvc',    { style: CARD_STYLE });
+
+                    numEl.mount('#cardNumberEl');
+                    expEl.mount('#cardExpiryEl');
+                    cvcEl.mount('#cardCvcEl');
+
+                    [numEl, expEl, cvcEl].forEach(el =>
+                        el.on('change', e => { if (errEl) errEl.textContent = e.error ? e.error.message : ''; })
+                    );
+
+                    // ── 4. PaymentRequest Button (Apple Pay / Google Pay) ─
+                    const pr = stripeInst.paymentRequest({
+                        country: 'US',
+                        currency: 'usd',
+                        total: { label: 'Save card (no charge)', amount: 0 },
+                        requestPayerName: true,
+                        requestPayerEmail: true,
+                    });
+
+                    const canPay = await pr.canMakePayment();
+                    const prContainer = document.getElementById('paymentRequestContainer');
+                    if (canPay && prContainer) {
+                        prContainer.classList.remove('hidden');
+                        const prBtn = elements.create('paymentRequestButton', {
+                            paymentRequest: pr,
+                            style: { paymentRequestButton: { theme: 'dark', height: '48px', type: 'default' } }
+                        });
+                        prBtn.mount('#paymentRequestButton');
+
+                        pr.on('paymentmethod', async (ev) => {
+                            const { error } = await stripeInst.confirmCardSetup(clientSecret, {
+                                payment_method: ev.paymentMethod.id
+                            }, { handleActions: false });
+                            if (error) {
+                                ev.complete('fail');
+                                if (errEl) errEl.textContent = error.message;
+                            } else {
+                                ev.complete('success');
+                                resetForm();
+                                if (prContainer) prContainer.classList.add('hidden');
+                                await _successCallback();
+                            }
+                        });
+                    }
+
+                    // ── 5. Save button for manual card ────────────────────
                     saveBtn.onclick = async () => {
                         saveBtn.disabled = true;
                         saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-                        const { error } = await stripeInstance.confirmCardSetup(savedClientSecret, {
-                            payment_method: { card: cardElement }
+                        const { setupIntent, error } = await stripeInst.confirmCardSetup(clientSecret, {
+                            payment_method: { card: numEl }
                         });
                         if (error) {
-                            errEl.textContent = error.message;
+                            if (errEl) errEl.textContent = error.message;
                             saveBtn.disabled = false;
-                            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Payment Method';
+                            saveBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Save Card Securely';
                         } else {
-                            // Success — hide form, reload billing list
-                            cardForm.classList.add('hidden');
-                            addBtn.classList.remove('hidden');
-                            saveBtn.disabled = false;
-                            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Payment Method';
-                            await onSuccess();
+                            resetForm();
+                            await _successCallback();
                         }
                     };
+
                 } catch (err) {
-                    errEl.textContent = 'Could not initialize payment form. Please try again.';
-                    console.error('Stripe setup error:', err);
+                    if (errEl) errEl.textContent = err.message || 'Could not initialize payment form. Please try again.';
+                    console.error('[Stripe] setup error:', err);
                 }
             });
 
-            cancelBtn?.addEventListener('click', () => {
-                cardForm.classList.add('hidden');
-                addBtn.classList.remove('hidden');
-                if (cardElement) { cardElement.unmount(); cardElement = null; }
-            });
+            cancelBtn?.addEventListener('click', resetForm);
         }
 
         // Auto-load history on open

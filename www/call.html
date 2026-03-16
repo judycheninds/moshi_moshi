@@ -16,7 +16,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css?v=2.0">
+    <link rel="stylesheet" href="styles.css?v=2.1">
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
@@ -445,7 +445,7 @@
                     </div>
 
                     <!-- Add Payment Method section -->
-                    <div id="addPaymentSection" style="margin-top:1.2rem;">
+                    <div id="addPaymentSection" style="margin-top:1rem;">
                         <button id="addPaymentBtn" class="btn-primary"
                             style="width:100%; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
                             <i class="fa-solid fa-plus"></i> Add Payment Method
@@ -458,15 +458,33 @@
                                 <button id="cancelAddCard" type="button" class="stripe-cancel-btn"><i
                                         class="fa-solid fa-xmark"></i></button>
                             </div>
-                            <div id="card-element-mount" class="stripe-card-element"></div>
-                            <div id="card-errors" class="stripe-card-error" role="alert"></div>
-                            <div class="stripe-wallets-hint">
-                                <i class="fa-brands fa-apple-pay"></i>
-                                <i class="fa-brands fa-google-pay"></i>
-                                <span>Supports all major cards, Apple Pay &amp; Google Pay</span>
+
+                            <!-- Apple Pay / Google Pay button — auto-hidden if unsupported -->
+                            <div id="paymentRequestContainer" class="hidden">
+                                <div id="paymentRequestButton"></div>
+                                <div class="stripe-or-divider"><span>or enter card details</span></div>
                             </div>
-                            <button id="saveCardBtn" class="btn-primary" style="width:100%; margin-top:1rem;">
-                                <i class="fa-solid fa-floppy-disk"></i> Save Payment Method
+
+                            <!-- Separate labeled card fields -->
+                            <div class="stripe-field-group">
+                                <label class="stripe-label"><i class="fa-solid fa-credit-card"></i> Card Number</label>
+                                <div id="cardNumberEl" class="stripe-card-element"></div>
+                            </div>
+                            <div class="stripe-field-row">
+                                <div class="stripe-field-group">
+                                    <label class="stripe-label">Expiry Date</label>
+                                    <div id="cardExpiryEl" class="stripe-card-element"></div>
+                                </div>
+                                <div class="stripe-field-group">
+                                    <label class="stripe-label">CVC</label>
+                                    <div id="cardCvcEl" class="stripe-card-element"></div>
+                                </div>
+                            </div>
+
+                            <div id="card-errors" class="stripe-card-error" role="alert"></div>
+
+                            <button id="saveCardBtn" class="btn-primary" style="width:100%; margin-top:0.8rem;">
+                                <i class="fa-solid fa-lock"></i> Save Card Securely
                             </button>
                         </div>
                     </div>
@@ -481,7 +499,7 @@
 
     <script src="https://js.stripe.com/v3/"></script>
     <script src="i18n.js?v=1.5"></script>
-    <script src="app.js?v=2.8"></script>
+    <script src="app.js?v=2.9"></script>
 </body>
 
 </html>
