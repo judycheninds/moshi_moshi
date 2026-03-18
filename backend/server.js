@@ -644,11 +644,11 @@ app.post('/twilio/voice', (req, res) => {
 
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
-        gatherLang = 'zh-TW'; // Standard STT for Taiwan
+        gatherLang = 'cmn-Hant-TW'; // Standard STT for Taiwan
         twilioVoice = 'Polly.Zhiyu-Neural'; // Upgraded to Premium Neural voice (avoids robotic scammer sound)
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
-        gatherLang = 'zh-CN';
+        gatherLang = 'cmn-Hans-CN';
         twilioVoice = 'Polly.Zhiyu-Neural'; // Amazon Polly Neural CN
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
@@ -712,8 +712,8 @@ app.post('/twilio/voice', (req, res) => {
         input: 'speech',
         language: gatherLang,
         action: publicUrl + '/twilio/gather-result',
-        speechTimeout: 'auto',
-        timeout: 15
+        speechTimeout: '2',
+        timeout: 10
     });
 
     res.type('text/xml');
@@ -735,11 +735,11 @@ app.post('/twilio/gather-result', async (req, res) => {
     let twilioVoice = 'alice';
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
-        gatherLang = 'zh-TW';
+        gatherLang = 'cmn-Hant-TW';
         twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
-        gatherLang = 'zh-CN';
+        gatherLang = 'cmn-Hans-CN';
         twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
@@ -870,8 +870,8 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: actionUrl,
-                speechTimeout: 'auto',
-                timeout: 15
+                speechTimeout: '2',
+                timeout: 10
             });
         } catch (e) {
             console.error("Gemini failed:", e);
@@ -890,8 +890,8 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: actionUrl,
-                speechTimeout: 'auto',
-                timeout: 15
+                speechTimeout: '2',
+                timeout: 10
             });
         }
     } else {
