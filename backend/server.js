@@ -330,7 +330,7 @@ async function sendStatusSMS(userPhone, message) {
 }
 
 // Core function: place an outbound Twilio call
-async function placeCall(params, attemptCount = 1) {
+async function placeCall({ phone, date, time, altTime1, altTime2, people, language, userName, userPhone, uiLanguage, userId, scheduledCallId }, attemptCount = 1) {
     const targetLang = language || 'ja-JP';
     let friendlyDate = date;
     try {
