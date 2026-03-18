@@ -1126,10 +1126,10 @@ app.post('/twilio/call-status', async (req, res) => {
                 - Set "success": FALSE if the restaurant said they are full, no availability, or proposed ANY different time WITHOUT the agent explicitly agreeing and finalizing a booking.
                 - Set "success": FALSE if the agent said they need to "check with the client" or ended the call without a firm booking.
                                 ALTERNATIVE TIME EXTRACTION — this is critical:
-                - Read the FULL conversation carefully, including Japanese/Chinese/Korean text.
                 - If the restaurant mentioned ANY specific time(s) that they DO have available (e.g. "18時はいかがですか", "下午6點可以嗎", "오후 6시는 어떠세요", "how about 6pm"), extract ALL of them.
                 - Normalize extracted times to a clear English format like "6:00 PM" or "6:00 PM and 7:30 PM".
                 - If the agent repeated the time back (e.g. "so you have availability at 6:00 PM?"), use that confirmed time as the alternative.
+                - You MUST extract alternatives even if the agent ultimately said "I will check with the client" and the overall success is false.
                 - Set "alternatives" ALWAYS in English (e.g. "6:00 PM").
                 - Set "alternativesLocalized" as the same time(s) written naturally in ${uiLangName} (e.g. for Traditional Chinese: "晚上6點", for Japanese: "午後6時").
                 - Do NOT confuse voicemail messages or system error phone numbers as alternative times.
@@ -1178,12 +1178,12 @@ app.post('/twilio/call-status', async (req, res) => {
             // ── Regex fallback: scan full conversation for time patterns if Gemini missed them ──
             if (!evalResult.success && !evalResult.alternatives) {
                 const fullConvo = conversation;
-                // Match patterns like 18:00, 6pm, 6:30 PM, 午後6時, 下午6點, 18時, etc.
+                // Match patterns like 18:00, 6pm, 6:30 PM, 午後6時, 下午6點, 18時, 六點, 等等
                 const timePatterns = [
                     /\b(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?\b/g,       // 18:00, 6:30 PM
                     /\b(\d{1,2})\s*(AM|PM|am|pm)\b/g,                  // 6pm, 11am
                     /([0-9]{1,2})時(半)?/g,                              // Japanese: 18時、6時半
-                    /([0-9]{1,2})點(半)?/g,                              // Chinese: 6點、6點半
+                    /([0-9]{1,2}|[一二三四五六七八九十兩]+)點(半|[0-9]{1,2}分|[一二三四五六七八九十]+分)?/g,                              // Chinese: 6點、六點、六點半
                     /오후\s*([0-9]{1,2})\s*시/g,                         // Korean: 오후 6시
                     /오전\s*([0-9]{1,2})\s*시/g,                         // Korean AM
                 ];
@@ -1274,7 +1274,7 @@ app.post('/twilio/call-status', async (req, res) => {
                     time: callState.rawTime,
                     people: callState.rawPeople,
                     guestName: callState.userName,
-                    status: isSuccess ? 'confirmed' : 'failed',
+                    status: statusType === 'success' ? 'confirmed' : statusType,
                     attemptCount: callState.attemptCount || 1,
                     alternatives: evalResult.alternatives || null,
                     notes: evalResult.notes || null,
