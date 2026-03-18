@@ -1285,7 +1285,7 @@ app.post('/twilio/call-status', async (req, res) => {
             // Update scheduled_calls status if applicable
             if (callState.scheduledCallId) {
                 await supabase.from('scheduled_calls').update({
-                    status: isSuccess ? 'completed' : 'failed',
+                    status: statusType === 'success' ? 'completed' : statusType,
                     alternatives: evalResult.alternatives,
                     notes: evalResult.notes
                 }).eq('id', callState.scheduledCallId);
