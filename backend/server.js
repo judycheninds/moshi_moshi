@@ -793,7 +793,8 @@ app.post('/twilio/gather-result', async (req, res) => {
             - Keep each reply SHORT — this is a phone call. 1–3 sentences max.
             - If the restaurant says something unclear or you need a moment, say something like "稍等一下" or "すみません、もう一度" — keep it natural.
             - If the restaurant CONFIRMS the booking: thank them warmly and say goodbye. That means the reservation succeeded.
-            - If the restaurant says the requested time is NOT available: ask what other times they have available. When the restaurant proposes an alternative time, REPEAT that specific time back to confirm you heard it correctly (e.g. "Understood, so you have availability at 7:00 PM?"), then say you need to check with ${callState.userName} and end the call politely. This repetition is crucial — it ensures the proposed time is clearly recorded in the transcript.
+            - If the restaurant says the requested time is NOT available: ask what other times they have available. 
+            - CRITICAL: When the restaurant proposes an alternative time, DO NOT ACCEPT IT. You MUST NOT book an alternative time. You must REPEAT that specific time back to confirm you heard it correctly (e.g. "So you have availability at 7:00 PM, correct?"), then immediately say you need to check with ${callState.userName} and END THE CALL POLITELY. This repetition is crucial so the user can review it later.
             - If you hear an automated voicemail, an answering machine, or a system message saying the number is "not available" (e.g., "The subscriber you have dialed is not available"), DO NOT treat it as a person talking. DO NOT treat random phone numbers in an automated message as alternative reservation times. Say a natural goodbye and end the call.
             - If the restaurant asks for the name: say "${callState.userName}".
             - If the restaurant asks for a phone number: say "${callState.userPhone}".
