@@ -1117,6 +1117,8 @@ app.post('/twilio/call-status', async (req, res) => {
                 The conversation may be in Japanese, Chinese, Korean, or English — handle all languages.
                 The USER's preferred display language is: ${uiLangName}.
                 
+                ${callState.isRebook ? `\nCRITICAL CONTEXT: This is a REBOOK call to ACCEPT a previously proposed time (${callState.rawTime}). The user has already approved it.` : ''}
+
                 CONVERSATION:
                 ${conversation}
                 
@@ -1124,13 +1126,14 @@ app.post('/twilio/call-status', async (req, res) => {
                 
                 CRITICAL RULES — read carefully:
                 - Set "success": TRUE if the restaurant explicitly said it is CONFIRMED/BOOKED for the requested time AND/OR the agent clearly accepted and confirmed the booking details.
+                - If the conversation ends with the restaurant confirming the details and the agent saying "thank you" or "goodbye", treat it as a FIRM BOOKING and set "success": TRUE.
                 - Set "success": FALSE if the restaurant said they are full, no availability, or proposed ANY different time WITHOUT the agent explicitly agreeing and finalizing a booking.
                 - Set "success": FALSE if the agent said they need to "check with the client" or ended the call without a firm booking.
                                 ALTERNATIVE TIME EXTRACTION — this is critical:
-                - If the restaurant mentioned ANY specific time(s) that they DO have available (e.g. "18時はいかがですか", "下午6點可以嗎", "오후 6시는 어떠세요", "how about 6pm"), extract ALL of them.
+                - If the restaurant mentioned specific time(s) that they DO have available, extract ALL of them.
                 - Normalize extracted times to a clear English format like "6:00 PM" or "6:00 PM and 7:30 PM".
-                - If the agent repeated the time back (e.g. "so you have availability at 6:00 PM?"), use that confirmed time as the alternative.
-                - You MUST extract alternatives even if the agent ultimately said "I will check with the client" and the overall success is false.
+                - DO NOT extract the requested time (${callState.rawTime}) as an alternative if the agent successfully booked it.
+                - You MUST extract true alternatives even if the agent ultimately said "I will check with the client" and the overall success is false.
                 - Set "alternatives" ALWAYS in English (e.g. "6:00 PM").
                 - Set "alternativesLocalized" as the same time(s) written naturally in ${uiLangName} (e.g. for Traditional Chinese: "晚上6點", for Japanese: "午後6時").
                 - Do NOT confuse voicemail messages or system error phone numbers as alternative times.
