@@ -645,7 +645,7 @@ app.post('/twilio/voice', (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'zh-TW'; // Standard STT for Taiwan
-        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Twilio requires Google/Wavenet for natural TW accents
+        twilioVoice = 'Polly.Zhiyu-Neural'; // Upgraded to Premium Neural voice (avoids robotic scammer sound)
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'zh-CN';
@@ -712,8 +712,8 @@ app.post('/twilio/voice', (req, res) => {
         input: 'speech',
         language: gatherLang,
         action: publicUrl + '/twilio/gather-result',
-        speechTimeout: '1',
-        timeout: 10
+        speechTimeout: 'auto',
+        timeout: 15
     });
 
     res.type('text/xml');
@@ -736,7 +736,7 @@ app.post('/twilio/gather-result', async (req, res) => {
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
         gatherLang = 'zh-TW';
-        twilioVoice = 'Google.cmn-TW-Wavenet-A';
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
         gatherLang = 'zh-CN';
@@ -870,8 +870,8 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: actionUrl,
-                speechTimeout: '1',
-                timeout: 10
+                speechTimeout: 'auto',
+                timeout: 15
             });
         } catch (e) {
             console.error("Gemini failed:", e);
@@ -890,8 +890,8 @@ app.post('/twilio/gather-result', async (req, res) => {
                 input: 'speech',
                 language: gatherLang,
                 action: actionUrl,
-                speechTimeout: '1',
-                timeout: 10
+                speechTimeout: 'auto',
+                timeout: 15
             });
         }
     } else {
