@@ -644,16 +644,16 @@ app.post('/twilio/voice', (req, res) => {
 
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
-        gatherLang = 'cmn-Hant-TW'; // Specific STT for Taiwan
-        twilioVoice = 'Google.cmn-TW-Neural2-A'; // Google Neural2 — more natural than Wavenet
+        gatherLang = 'zh-TW'; // Standard STT for Taiwan
+        twilioVoice = 'Google.cmn-TW-Wavenet-A'; // Twilio requires Google/Wavenet for natural TW accents
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
-        gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Google.cmn-CN-Neural2-D'; // Google Neural2 CN
+        gatherLang = 'zh-CN';
+        twilioVoice = 'Polly.Zhiyu-Neural'; // Amazon Polly Neural CN
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese — more natural
+        twilioVoice = 'Polly.Kazuha-Neural'; // Amazon Polly Neural Japanese
     } else if (targetLang.startsWith('ko')) {
         sayLang = 'ko-KR';
         gatherLang = 'ko-KR';
@@ -661,7 +661,7 @@ app.post('/twilio/voice', (req, res) => {
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Danielle-Generative'; // Amazon Polly GENERATIVE — most human-sounding
+        twilioVoice = 'Polly.Salli-Neural'; // Amazon Polly Neural English
     }
 
     // The initial thing the AI says to start the conversation — warm, human, personal
@@ -735,16 +735,16 @@ app.post('/twilio/gather-result', async (req, res) => {
     let twilioVoice = 'alice';
     if (targetLang.toLowerCase().includes('tw') || targetLang.toLowerCase().includes('hant') || targetLang === 'zh') {
         sayLang = 'zh-TW';
-        gatherLang = 'cmn-Hant-TW';
-        twilioVoice = 'Google.cmn-TW-Neural2-A'; // Google Neural2 TW
+        gatherLang = 'zh-TW';
+        twilioVoice = 'Google.cmn-TW-Wavenet-A';
     } else if (targetLang.startsWith('zh')) {
         sayLang = 'zh-CN';
-        gatherLang = 'cmn-Hans-CN';
-        twilioVoice = 'Google.cmn-CN-Neural2-D'; // Google Neural2 CN
+        gatherLang = 'zh-CN';
+        twilioVoice = 'Polly.Zhiyu-Neural';
     } else if (targetLang.startsWith('ja')) {
         sayLang = 'ja-JP';
         gatherLang = 'ja-JP';
-        twilioVoice = 'Google.ja-JP-Neural2-B'; // Google Neural2 Japanese
+        twilioVoice = 'Polly.Kazuha-Neural';
     } else if (targetLang.startsWith('ko')) {
         sayLang = 'ko-KR';
         gatherLang = 'ko-KR';
@@ -752,7 +752,7 @@ app.post('/twilio/gather-result', async (req, res) => {
     } else {
         sayLang = 'en-US';
         gatherLang = 'en-US';
-        twilioVoice = 'Polly.Danielle-Generative'; // Most human-sounding English voice
+        twilioVoice = 'Polly.Salli-Neural';
     }
 
     const langNames = {
