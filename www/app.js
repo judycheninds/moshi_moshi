@@ -800,10 +800,8 @@ document.addEventListener('DOMContentLoaded', () => {
             window._isRebook = true;
             window._acceptedAltTime = acceptedTime || altOfferText?.textContent?.trim() || null;
 
-            // Restore button state — respect auth
-            btnLoader.classList.add('hidden');
-            btnText.classList.remove('hidden');
-            updateCallBtnState();
+            // Automatically place the rebooked call
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
         });
 
 
