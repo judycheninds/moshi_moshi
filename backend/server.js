@@ -1246,17 +1246,23 @@ app.post('/twilio/call-status', async (req, res) => {
                     const { data: user } = await supabase.from('users').select('email, name').eq('id', callState.userId).single();
                     if (!user?.email) throw new Error('Could not find user info');
 
-                    const customerId = await getStripeCustomerId(user.email, user.name);
-                    if (!customerId) throw new Error('No mapping to stripe account');
-
-                    const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
+                    let customerId = null;
+                    let paymentMethodToUse = null;
+                    let isMockedCard = false;
 
                     // --- MOCK TEST CARD FOR JENSEN ---
-                    let paymentMethodToUse = pms.data.length ? pms.data[0].id : null;
-                    let isMockedCard = false;
                     if (user.email === 'judychen1203@gmail.com') {
+                        customerId = 'cus_mock_jensen';
                         paymentMethodToUse = 'pm_mock_jensen_test_visa';
                         isMockedCard = true;
+                    } else {
+                        customerId = await getStripeCustomerId(user.email, user.name);
+                        if (!customerId) throw new Error('No mapping to stripe account');
+
+                        if (stripe) {
+                            const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
+                            paymentMethodToUse = pms.data.length ? pms.data[0].id : null;
+                        }
                     }
 
                     if (!paymentMethodToUse) throw new Error('No payment method found');
