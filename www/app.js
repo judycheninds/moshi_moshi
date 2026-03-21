@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const errEl = document.getElementById('card-errors');
             if (!addBtn || !cardForm) return;
 
-            let stripeInst = null, numEl = null, expEl = null, cvcEl = null;
+            let stripeInst = null, numEl = null, expEl = null, cvcEl = null, zipEl = null;
 
             const CARD_STYLE = {
                 base: {
@@ -553,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (numEl) { numEl.unmount(); numEl = null; }
                 if (expEl) { expEl.unmount(); expEl = null; }
                 if (cvcEl) { cvcEl.unmount(); cvcEl = null; }
+                if (zipEl) { zipEl.unmount(); zipEl = null; }
             }
 
             addBtn.addEventListener('click', async () => {
@@ -583,12 +584,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     numEl = elements.create('cardNumber', { style: CARD_STYLE, showIcon: true });
                     expEl = elements.create('cardExpiry', { style: CARD_STYLE });
                     cvcEl = elements.create('cardCvc', { style: CARD_STYLE });
+                    zipEl = elements.create('postalCode', { style: CARD_STYLE });
 
                     numEl.mount('#cardNumberEl');
                     expEl.mount('#cardExpiryEl');
                     cvcEl.mount('#cardCvcEl');
+                    zipEl.mount('#cardZipEl');
 
-                    [numEl, expEl, cvcEl].forEach(el =>
+                    [numEl, expEl, cvcEl, zipEl].forEach(el =>
                         el.on('change', e => { if (errEl) errEl.textContent = e.error ? e.error.message : ''; })
                     );
 
