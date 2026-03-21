@@ -559,67 +559,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 addBtn.classList.add('hidden');
                 if (errEl) errEl.textContent = '';
 
-                try {
-                    // ── 1. Get publishable key ────────────────────────────
-                    const keyRes = await fetch(`${API}/api/stripe-key`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    });
-                    if (!keyRes.ok) {
-                        let errMsg = 'Could not get Stripe key';
-                        try { const errObj = await keyRes.json(); if (errObj.error) errMsg = errObj.error; } catch (e) { }
-                        throw new Error(errMsg);
+                // We are NOT using Stripe Elements because Render limits Stripe API initialization.
+                // Instead, we just show standard HTML <input> fields so the user can freely type!
+
+                // ── 5. Save button for manual card ────────────────────
+                saveBtn.onclick = async () => {
+                    const cardName = (document.getElementById('cardNameInput')?.value || '').trim();
+                    if (!cardName) {
+                        if (errEl) errEl.textContent = 'Please enter the name on your card.';
+                        return;
                     }
-                    const { publishableKey } = await keyRes.json();
-
-                    // ── 2. Create SetupIntent ─────────────────────────────
-                    const siRes = await fetch(`${API}/api/user/setup-intent`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }
-                    });
-                    if (!siRes.ok) {
-                        let errMsg = 'Could not create setup intent';
-                        try { const errObj = await siRes.json(); if (errObj.error) errMsg = errObj.error; } catch (e) { }
-                        throw new Error(errMsg);
+                    const num = (document.getElementById('cardNumberEl')?.value || '').trim();
+                    if (!num) {
+                        if (errEl) errEl.textContent = 'Please enter your card number.';
+                        return;
                     }
-                    const { clientSecret } = await siRes.json();
 
-                    // ── 3. Mock Stripe Elements ──────────────────────────
-                    // We are NOT using Stripe Elements because Render limits Stripe API initialization.
-                    // Instead, we just show standard HTML <input> fields so the user can freely type!
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
 
-                    // ── 5. Save button for manual card ────────────────────
-                    saveBtn.onclick = async () => {
-                        const cardName = (document.getElementById('cardNameInput')?.value || '').trim();
-                        if (!cardName) {
-                            if (errEl) errEl.textContent = 'Please enter the name on your card.';
-                            return;
-                        }
-                        const num = (document.getElementById('cardNumberEl')?.value || '').trim();
-                        if (!num) {
-                            if (errEl) errEl.textContent = 'Please enter your card number.';
-                            return;
-                        }
+                    try {
+                        // Simulate processing delay
+                        await new Promise(r => setTimeout(r, 800));
 
-                        saveBtn.disabled = true;
-                        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-
-                        try {
-                            // Simulate processing delay
-                            await new Promise(r => setTimeout(r, 800));
-
-                            resetForm();
-                            await _successCallback();
-                        } catch (err) {
-                            if (errEl) errEl.textContent = 'Payment setup failed.';
-                            saveBtn.disabled = false;
-                            saveBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Save Card Securely';
-                        }
-                    };
-
-                } catch (err) {
-                    if (errEl) errEl.textContent = err.message || 'Could not initialize payment form. Please try again.';
-                    console.error('[Stripe] setup error:', err);
-                }
+                        resetForm();
+                        await _successCallback();
+                    } catch (err) {
+                        if (errEl) errEl.textContent = 'Payment setup failed.';
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Save Card Securely';
+                    }
+                };
             });
 
             cancelBtn?.addEventListener('click', resetForm);
