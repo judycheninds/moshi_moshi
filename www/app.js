@@ -256,13 +256,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentSignUpStep === 0) {
             prevBtn.classList.add('hidden'); nextBtn.classList.remove('hidden'); modalSubmitBtn.classList.add('hidden');
         } else if (currentSignUpStep === 1) {
-            prevBtn.classList.remove('hidden'); nextBtn.classList.remove('hidden'); modalSubmitBtn.classList.add('hidden');
-        } else if (currentSignUpStep === 2) {
             prevBtn.classList.remove('hidden'); nextBtn.classList.add('hidden'); modalSubmitBtn.classList.remove('hidden');
         }
     }
 
-    nextBtn?.addEventListener('click', (e) => { e.preventDefault(); if (currentSignUpStep < 2) { currentSignUpStep++; updateSignUpSteps(); } });
+    nextBtn?.addEventListener('click', (e) => { e.preventDefault(); if (currentSignUpStep < 1) { currentSignUpStep++; updateSignUpSteps(); } });
     prevBtn?.addEventListener('click', (e) => { e.preventDefault(); if (currentSignUpStep > 0) { currentSignUpStep--; updateSignUpSteps(); } });
 
     modalToggleBtn?.addEventListener('click', (e) => {
@@ -323,8 +321,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             if (isSignUpMode) {
-                const name = document.getElementById('modal-name').value.trim();
-                const phone = document.getElementById('modal-userPhone').value.trim();
+                const name = document.getElementById('modal-name')?.value.trim() || '';
+                const phone = document.getElementById('modal-userPhone')?.value.trim() || '';
                 if (!name) { showModalError('Please enter your name.'); modalSubmitBtn.disabled = false; modalSubmitBtn.innerHTML = originalText; return; }
                 const res = await fetch(`${API}/api/auth/register`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
