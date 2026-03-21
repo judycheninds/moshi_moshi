@@ -234,6 +234,21 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
         const customerId = await getStripeCustomerId(req.user.email, req.user.name);
         if (!customerId) return res.json({ paymentMethods: [] });
 
+        // --- MOCK TEST CARD FOR JENSEN ---
+        if (req.user.email === 'judychen1203@gmail.com') {
+            return res.json({
+                paymentMethods: [{
+                    id: 'pm_mock_jensen_test_visa',
+                    name: 'Jensen (Test Account)',
+                    brand: 'visa',
+                    last4: '4242',
+                    exp_month: 12,
+                    exp_year: 2035
+                }]
+            });
+        }
+        // ---------------------------------
+
         const paymentMethods = await stripe.paymentMethods.list({
             customer: customerId,
             type: 'card',
@@ -1234,18 +1249,34 @@ app.post('/twilio/call-status', async (req, res) => {
                     if (!customerId) throw new Error('No mapping to stripe account');
 
                     const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
-                    if (!pms.data.length) throw new Error('No payment method found');
+
+                    // --- MOCK TEST CARD FOR JENSEN ---
+                    let paymentMethodToUse = pms.data.length ? pms.data[0].id : null;
+                    let isMockedCard = false;
+                    if (user.email === 'judychen1203@gmail.com') {
+                        paymentMethodToUse = 'pm_mock_jensen_test_visa';
+                        isMockedCard = true;
+                    }
+
+                    if (!paymentMethodToUse) throw new Error('No payment method found');
 
                     const depositAmt = evalResult.depositAmount || 1000; // default $10 if amount unknown
-                    const pi = await stripe.paymentIntents.create({
-                        amount: depositAmt,
-                        currency: 'usd',
-                        customer: customerId,
-                        payment_method: pms.data[0].id,
-                        off_session: true,
-                        confirm: true,
-                        description: `Restaurant deposit for ${callState.restaurantPhone} on ${callState.rawDate}`
-                    });
+
+                    let pi = { status: 'failed' };
+                    if (isMockedCard) {
+                        // Simulate a successful Stripe charge for Jensen's mock card
+                        pi.status = 'succeeded';
+                    } else {
+                        pi = await stripe.paymentIntents.create({
+                            amount: depositAmt,
+                            currency: 'usd',
+                            customer: customerId,
+                            payment_method: paymentMethodToUse,
+                            off_session: true,
+                            confirm: true,
+                            description: `Restaurant deposit for ${callState.restaurantPhone} on ${callState.rawDate}`
+                        });
+                    }
 
                     if (pi.status === 'succeeded') {
                         depositResult.charged = true;
