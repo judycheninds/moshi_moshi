@@ -279,6 +279,12 @@ app.get('/api/stripe-key', authMiddleware, (req, res) => {
 // POST /api/user/setup-intent — create a SetupIntent to add a payment method
 app.post('/api/user/setup-intent', authMiddleware, async (req, res) => {
     try {
+        // --- MOCK TEST CARD FOR JENSEN ---
+        if (req.user.email === 'judychen1203@gmail.com') {
+            return res.json({ clientSecret: 'seti_mock_123_secret_mock_123', customerId: 'cus_mock_jensen' });
+        }
+        // ---------------------------------
+
         const customerId = await getStripeCustomerId(req.user.email, req.user.name, { supabase_id: req.user.id });
         if (!customerId) throw new Error("Could not initialize billing system");
 
