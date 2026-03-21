@@ -231,9 +231,6 @@ app.get('/api/reservations', authMiddleware, async (req, res) => {
 // GET /api/user/billing
 app.get('/api/user/billing', authMiddleware, async (req, res) => {
     try {
-        const customerId = await getStripeCustomerId(req.user.email, req.user.name);
-        if (!customerId) return res.json({ paymentMethods: [] });
-
         // --- MOCK TEST CARD FOR JENSEN ---
         if (req.user.email === 'judychen1203@gmail.com' || req.user.email.endsWith('@test.com')) {
             return res.json({
@@ -248,6 +245,9 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
             });
         }
         // ---------------------------------
+
+        const customerId = await getStripeCustomerId(req.user.email, req.user.name);
+        if (!customerId) return res.json({ paymentMethods: [] });
 
         const paymentMethods = await stripe.paymentMethods.list({
             customer: customerId,
