@@ -1311,50 +1311,14 @@ app.post('/twilio/call-status', async (req, res) => {
                 }).eq('id', callState.scheduledCallId);
             }
 
-            // Trigger Stripe Payment Charge if Successful! (Assuming $5 fee)
-            let paymentStatusMsg = "";
-            let paymentSucceeded = false;
-            if (isSuccess && callState.userId) {
-                // Charge flow fallback
-                const { data: user, error } = await supabase.from('users').select('email, name').eq('id', callState.userId).single();
-                if (user && user.email) {
-                    try {
-                        const customerId = await getStripeCustomerId(user.email, user.name);
-                        if (customerId) {
-                            const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
-                            if (pms.data.length) {
-                                const depositAmt = 500; // $5.00
-                                const pi = await stripe.paymentIntents.create({
-                                    amount: depositAmt,
-                                    currency: 'usd',
-                                    customer: customerId,
-                                    payment_method: pms.data[0].id,
-                                    off_session: true,
-                                    confirm: true,
-                                    description: `Reservation Fee for ${callState.restaurantPhone} on ${callState.rawDate}`
-                                });
-
-                                if (pi.status === 'succeeded') {
-                                    paymentSucceeded = true;
-                                    paymentStatusMsg = "The $5 service fee has been successfully charged.";
-                                    // Update DB reservation flag as paid
-                                    await supabase.from('reservations').update({ payment_status: 'paid' }).eq('call_sid', callSid);
-                                }
-                            } else {
-                                paymentStatusMsg = "No card on file to charge the $5 fee.";
-                            }
-                        }
-                    } catch (err) {
-                        console.error("Stripe Charge Error:", err);
-                        paymentStatusMsg = "We couldn't process the $5 service fee but your reservation is still confirmed.";
-                    }
-                }
-            }
-
             // SMS the user with the outcome
             if (isSuccess) {
                 let textMsg = `✅ Reservation confirmed! Table for ${callState.rawPeople} on ${callState.rawDate} at ${callState.rawTime} under "${callState.userName}".`;
-                if (paymentStatusMsg) textMsg += `\n${paymentStatusMsg}`;
+                if (depositResult && depositResult.charged) {
+                    textMsg += `\nThe $5 service fee has been successfully charged.`;
+                } else if (depositResult && depositResult.error) {
+                    textMsg += `\n⚠️ We couldn't process the $5 service fee, but your reservation is confirmed.`;
+                }
                 await sendStatusSMS(callState.userPhone, textMsg);
             } else if (evalResult.alternatives) {
                 await sendStatusSMS(callState.userPhone,
