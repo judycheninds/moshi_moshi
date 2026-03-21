@@ -234,20 +234,7 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
         const customerId = await getStripeCustomerId(req.user.email, req.user.name);
         if (!customerId) return res.json({ paymentMethods: [] });
 
-        // --- MOCK TEST CARD FOR JENSEN ---
-        if (req.user.email === 'judychen1203@gmail.com') {
-            return res.json({
-                paymentMethods: [{
-                    id: 'pm_mock_jensen_test_visa',
-                    name: 'Jensen (Test Account)',
-                    brand: 'visa',
-                    last4: '4242',
-                    exp_month: 12,
-                    exp_year: 2035
-                }]
-            });
-        }
-        // ---------------------------------
+
 
         const paymentMethods = await stripe.paymentMethods.list({
             customer: customerId,
@@ -274,22 +261,14 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
 // GET /api/stripe-key — expose publishable key to frontend
 app.get('/api/stripe-key', authMiddleware, (req, res) => {
     let pk = process.env.STRIPE_PUBLISHABLE_KEY;
-    // --- MOCK TEST CARD FOR JENSEN ---
-    if (!pk && req.user.email === 'judychen1203@gmail.com') {
-        pk = 'pk_test_mock_jensen_123';
-    }
-    // ---------------------------------
+
     res.json({ publishableKey: pk });
 });
 
 // POST /api/user/setup-intent — create a SetupIntent to add a payment method
 app.post('/api/user/setup-intent', authMiddleware, async (req, res) => {
     try {
-        // --- MOCK TEST CARD FOR JENSEN ---
-        if (req.user.email === 'judychen1203@gmail.com') {
-            return res.json({ clientSecret: 'seti_mock_123_secret_mock_123', customerId: 'cus_mock_jensen' });
-        }
-        // ---------------------------------
+
 
         const customerId = await getStripeCustomerId(req.user.email, req.user.name, { supabase_id: req.user.id });
         if (!customerId) throw new Error("Could not initialize billing system");
@@ -1258,42 +1237,28 @@ app.post('/twilio/call-status', async (req, res) => {
                     const { data: user } = await supabase.from('users').select('email, name').eq('id', callState.userId).single();
                     if (!user?.email) throw new Error('Could not find user info');
 
-                    let customerId = null;
+                    let customerId = await getStripeCustomerId(user.email, user.name);
                     let paymentMethodToUse = null;
-                    let isMockedCard = false;
 
-                    // --- MOCK TEST CARD FOR JENSEN ---
-                    if (user.email === 'judychen1203@gmail.com') {
-                        customerId = 'cus_mock_jensen';
-                        paymentMethodToUse = 'pm_mock_jensen_test_visa';
-                        isMockedCard = true;
-                    } else {
-                        customerId = await getStripeCustomerId(user.email, user.name);
-                        if (!customerId) throw new Error('No mapping to stripe account');
+                    if (!customerId) throw new Error('No mapping to stripe account');
 
-                        if (stripe) {
-                            const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
-                            paymentMethodToUse = pms.data.length ? pms.data[0].id : null;
-                        }
+                    if (stripe) {
+                        const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
+                        paymentMethodToUse = pms.data.length ? pms.data[0].id : null;
                     }
 
                     if (!paymentMethodToUse) throw new Error('No payment method found');
 
                     let pi = { status: 'failed' };
-                    if (isMockedCard) {
-                        // Simulate a successful Stripe charge for Jensen's mock card
-                        pi.status = 'succeeded';
-                    } else {
-                        pi = await stripe.paymentIntents.create({
-                            amount: serviceFeeAmt,
-                            currency: 'usd',
-                            customer: customerId,
-                            payment_method: paymentMethodToUse,
-                            off_session: true,
-                            confirm: true,
-                            description: `Service fee for reservation at ${callState.restaurantPhone} on ${callState.rawDate}`
-                        });
-                    }
+                    pi = await stripe.paymentIntents.create({
+                        amount: serviceFeeAmt,
+                        currency: 'usd',
+                        customer: customerId,
+                        payment_method: paymentMethodToUse,
+                        off_session: true,
+                        confirm: true,
+                        description: `Service fee for reservation at ${callState.restaurantPhone} on ${callState.rawDate}`
+                    });
 
                     if (pi.status === 'succeeded') {
                         depositResult.charged = true;
