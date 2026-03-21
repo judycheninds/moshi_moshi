@@ -1234,38 +1234,50 @@ app.post('/twilio/call-status', async (req, res) => {
                     if (!stripe) throw new Error('Stripe not configured');
 
                     // We must fetch the user to get their email, since this runs in a callback without req.user
-                    const { data: user } = await supabase.from('users').select('email, name').eq('id', callState.userId).single();
+                    const { data: user } = await supabase.from('users').select('email, name, created_at').eq('id', callState.userId).single();
                     if (!user?.email) throw new Error('Could not find user info');
 
-                    let customerId = await getStripeCustomerId(user.email, user.name);
-                    let paymentMethodToUse = null;
+                    // ── 1-WEEK FREE TRIAL LOGIC ──
+                    const trialDurationMs = 7 * 24 * 60 * 60 * 1000;
+                    const isFreeTrial = user.created_at && (Date.now() - new Date(user.created_at).getTime() < trialDurationMs);
 
-                    if (!customerId) throw new Error('No mapping to stripe account');
-
-                    if (stripe) {
-                        const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
-                        paymentMethodToUse = pms.data.length ? pms.data[0].id : null;
-                    }
-
-                    if (!paymentMethodToUse) throw new Error('No payment method found');
-
-                    let pi = { status: 'failed' };
-                    pi = await stripe.paymentIntents.create({
-                        amount: serviceFeeAmt,
-                        currency: 'usd',
-                        customer: customerId,
-                        payment_method: paymentMethodToUse,
-                        off_session: true,
-                        confirm: true,
-                        description: `Service fee for reservation at ${callState.restaurantPhone} on ${callState.rawDate}`
-                    });
-
-                    if (pi.status === 'succeeded') {
+                    if (isFreeTrial) {
+                        const daysLeft = Math.ceil((trialDurationMs - (Date.now() - new Date(user.created_at).getTime())) / (1000 * 60 * 60 * 24));
+                        depositResult.amount = 0;
                         depositResult.charged = true;
-                        broadcastLog(callSid, 'system', `✅ Service fee of $${(serviceFeeAmt / 100).toFixed(2)} charged successfully.`);
+                        depositResult.isFreeTrial = true;
+                        broadcastLog(callSid, 'system', `🎁 Free trial active! $5 service fee waived. (${daysLeft} days remaining)`);
                     } else {
-                        depositResult.error = `Payment status: ${pi.status}`;
-                        broadcastLog(callSid, 'system', `⚠️ Service fee charge incomplete: ${pi.status}`);
+                        let customerId = await getStripeCustomerId(user.email, user.name);
+                        let paymentMethodToUse = null;
+
+                        if (!customerId) throw new Error('No mapping to stripe account');
+
+                        if (stripe) {
+                            const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
+                            paymentMethodToUse = pms.data.length ? pms.data[0].id : null;
+                        }
+
+                        if (!paymentMethodToUse) throw new Error('No payment method found');
+
+                        let pi = { status: 'failed' };
+                        pi = await stripe.paymentIntents.create({
+                            amount: serviceFeeAmt,
+                            currency: 'usd',
+                            customer: customerId,
+                            payment_method: paymentMethodToUse,
+                            off_session: true,
+                            confirm: true,
+                            description: `Service fee for reservation at ${callState.restaurantPhone} on ${callState.rawDate}`
+                        });
+
+                        if (pi.status === 'succeeded') {
+                            depositResult.charged = true;
+                            broadcastLog(callSid, 'system', `✅ Service fee of $${(serviceFeeAmt / 100).toFixed(2)} charged successfully.`);
+                        } else {
+                            depositResult.error = `Payment status: ${pi.status}`;
+                            broadcastLog(callSid, 'system', `⚠️ Service fee charge incomplete: ${pi.status}`);
+                        }
                     }
                 } catch (depErr) {
                     depositResult.error = depErr.message;
@@ -1314,8 +1326,10 @@ app.post('/twilio/call-status', async (req, res) => {
             // SMS the user with the outcome
             if (isSuccess) {
                 let textMsg = `✅ Reservation confirmed! Table for ${callState.rawPeople} on ${callState.rawDate} at ${callState.rawTime} under "${callState.userName}".`;
-                if (depositResult && depositResult.charged) {
-                    textMsg += `\nThe $5 service fee has been successfully charged.`;
+                if (depositResult && depositResult.isFreeTrial) {
+                    textMsg += `\n🎁 Your 1-Week Free Trial is active! The $5.00 service fee has been completely waived.`;
+                } else if (depositResult && depositResult.charged) {
+                    textMsg += `\nThe $5.00 service fee has been successfully charged.`;
                 } else if (depositResult && depositResult.error) {
                     textMsg += `\n⚠️ We couldn't process the $5 service fee, but your reservation is confirmed.`;
                 }

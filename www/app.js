@@ -1089,21 +1089,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 const depositStatus = document.getElementById('depositStatus');
                 if (depositBox) {
                     depositBox.classList.remove('hidden');
-                    const rawAmt = depositInfo.amount
-                        ? `${(depositInfo.amount / 100).toFixed(2)} ${(depositInfo.currency || 'USD').toUpperCase()}`
-                        : '';
-                    depositDesc.textContent = (translateStr('deposit-requested-desc') || 'The restaurant requested a deposit of {amt} to hold your reservation.').replace('{amt}', rawAmt || 'an amount');
-                    if (depositInfo.charged) {
-                        depositTitle.textContent = translateStr('deposit-charged-title') || '✅ Deposit Charged';
+
+                    if (depositInfo.isFreeTrial) {
+                        depositTitle.textContent = '🎁 Free Trial Active';
                         depositStatus.className = 'deposit-status deposit-charged';
-                        depositStatus.textContent = (translateStr('deposit-charged-body') || 'Your card was successfully charged {amt}.').replace('{amt}', rawAmt);
+                        depositStatus.textContent = 'Your 1-Week Free Trial is active! The $5.00 service fee has been completely waived for this reservation.';
                     } else {
-                        depositTitle.textContent = translateStr('deposit-pending-title') || '⚠️ Deposit Required — Action Needed';
-                        depositStatus.className = 'deposit-status deposit-pending';
-                        const pendingBody = (translateStr('deposit-pending-body') || 'Please contact the restaurant directly to pay the deposit of {amt}.').replace('{amt}', rawAmt);
-                        depositStatus.textContent = depositInfo.error
-                            ? `${pendingBody} (${depositInfo.error})`
-                            : pendingBody;
+                        const rawAmt = depositInfo.amount
+                            ? `${(depositInfo.amount / 100).toFixed(2)} ${(depositInfo.currency || 'USD').toUpperCase()}`
+                            : '';
+                        depositDesc.textContent = (translateStr('deposit-requested-desc') || 'The restaurant requested a deposit of {amt} to hold your reservation.').replace('{amt}', rawAmt || 'an amount');
+                        if (depositInfo.charged) {
+                            depositTitle.textContent = translateStr('deposit-charged-title') || '✅ Service Fee Charged';
+                            depositStatus.className = 'deposit-status deposit-charged';
+                            depositStatus.textContent = (translateStr('deposit-charged-body') || 'Your card was successfully charged {amt}.').replace('{amt}', rawAmt);
+                        } else {
+                            depositTitle.textContent = translateStr('deposit-pending-title') || '⚠️ Service Fee Pending — Action Needed';
+                            depositStatus.className = 'deposit-status deposit-pending';
+                            const pendingBody = (translateStr('deposit-pending-body') || 'Please update your payment method to pay the {amt} service fee.').replace('{amt}', rawAmt);
+                            depositStatus.textContent = depositInfo.error
+                                ? `${pendingBody} (${depositInfo.error})`
+                                : pendingBody;
+                        }
                     }
                 }
             }
