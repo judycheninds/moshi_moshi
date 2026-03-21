@@ -119,9 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ---- Auth State ----
-    const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? 'http://localhost:3000'
-        : 'https://moshi-moshi-8dh6.onrender.com';
+    // All API routes are relative to the current host
+    const API = '';
     let authToken = localStorage.getItem('mm_token') || null;
     let currentUser = JSON.parse(localStorage.getItem('mm_user') || 'null');
 
@@ -538,9 +537,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 base: {
                     color: '#ffffff',
                     fontFamily: '"Outfit", sans-serif',
-                    fontSize: '15px',
-                    '::placeholder': { color: 'rgba(255,255,255,0.35)' },
-                    iconColor: '#aaa'
+                    fontSize: '16px',
+                    lineHeight: '24px',
+                    '::placeholder': { color: 'rgba(255,255,255,0.45)' },
+                    iconColor: '#ffffff'
                 },
                 invalid: { color: '#ff6b6b', iconColor: '#ff6b6b' }
             };
