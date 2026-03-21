@@ -273,7 +273,13 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
 
 // GET /api/stripe-key — expose publishable key to frontend
 app.get('/api/stripe-key', authMiddleware, (req, res) => {
-    res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
+    let pk = process.env.STRIPE_PUBLISHABLE_KEY;
+    // --- MOCK TEST CARD FOR JENSEN ---
+    if (!pk && req.user.email === 'judychen1203@gmail.com') {
+        pk = 'pk_test_mock_jensen_123';
+    }
+    // ---------------------------------
+    res.json({ publishableKey: pk });
 });
 
 // POST /api/user/setup-intent — create a SetupIntent to add a payment method
