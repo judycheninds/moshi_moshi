@@ -1163,6 +1163,9 @@ app.post('/twilio/call-status', async (req, res) => {
 
             console.log('[Eval] Raw Gemini evaluation result:', rawText);
 
+            let jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) rawText = jsonMatch[0];
+
             let evalResult = { success: false, confirmedTime: null, alternatives: null, notes: '' };
             try {
                 evalResult = JSON.parse(rawText);
@@ -1173,7 +1176,7 @@ app.post('/twilio/call-status', async (req, res) => {
             }
 
             // Hardcode network/voicemail error overrides to prevent any AI hallucination of alternatives
-            if (allRestaurantText.match(/not available|voicemail|answering machine|0\s*4\s*7\s*6\s*4\s*5|unallocated|leave a message/i)) {
+            if (allRestaurantText.match(/number you have reached|voicemail|answering machine|0\s*4\s*7\s*6\s*4\s*5|unallocated|leave a message/i)) {
                 evalResult.alternatives = null;
                 evalResult.success = false;
                 evalResult.notes = "The restaurant's phone number was not available or reached an automated voicemail.";
