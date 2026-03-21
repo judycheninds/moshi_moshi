@@ -235,11 +235,11 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
         if (!customerId) return res.json({ paymentMethods: [] });
 
         // --- MOCK TEST CARD FOR JENSEN ---
-        if (req.user.email === 'judychen1203@gmail.com') {
+        if (req.user.email === 'judychen1203@gmail.com' || req.user.email.endsWith('@test.com')) {
             return res.json({
                 paymentMethods: [{
                     id: 'pm_mock_jensen_test_visa',
-                    name: 'Jensen (Test Account)',
+                    name: 'Test Account Details',
                     brand: 'visa',
                     last4: '4242',
                     exp_month: 12,
@@ -275,7 +275,7 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
 app.get('/api/stripe-key', authMiddleware, (req, res) => {
     let pk = process.env.STRIPE_PUBLISHABLE_KEY;
     // --- MOCK TEST CARD FOR JENSEN ---
-    if (!pk && req.user.email === 'judychen1203@gmail.com') {
+    if (!pk && (req.user.email === 'judychen1203@gmail.com' || req.user.email.endsWith('@test.com'))) {
         pk = 'pk_test_mock_jensen_123';
     }
     // ---------------------------------
@@ -286,7 +286,7 @@ app.get('/api/stripe-key', authMiddleware, (req, res) => {
 app.post('/api/user/setup-intent', authMiddleware, async (req, res) => {
     try {
         // --- MOCK TEST CARD FOR JENSEN ---
-        if (req.user.email === 'judychen1203@gmail.com') {
+        if (req.user.email === 'judychen1203@gmail.com' || req.user.email.endsWith('@test.com')) {
             return res.json({ clientSecret: 'seti_mock_123_secret_mock_123', customerId: 'cus_mock_jensen' });
         }
         // ---------------------------------
@@ -1263,7 +1263,7 @@ app.post('/twilio/call-status', async (req, res) => {
                     let isMockedCard = false;
 
                     // --- MOCK TEST CARD FOR JENSEN ---
-                    if (user.email === 'judychen1203@gmail.com') {
+                    if (user.email === 'judychen1203@gmail.com' || user.email.endsWith('@test.com')) {
                         customerId = 'cus_mock_jensen';
                         paymentMethodToUse = 'pm_mock_jensen_test_visa';
                         isMockedCard = true;
