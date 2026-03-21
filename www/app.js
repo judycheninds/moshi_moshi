@@ -566,7 +566,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const keyRes = await fetch(`${API}/api/stripe-key`, {
                         headers: { 'Authorization': `Bearer ${authToken}` }
                     });
-                    if (!keyRes.ok) throw new Error('Could not get Stripe key');
+                    if (!keyRes.ok) {
+                        let errMsg = 'Could not get Stripe key';
+                        try { const errObj = await keyRes.json(); if (errObj.error) errMsg = errObj.error; } catch (e) { }
+                        throw new Error(errMsg);
+                    }
                     const { publishableKey } = await keyRes.json();
 
                     // ── 2. Create SetupIntent ─────────────────────────────
@@ -574,7 +578,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }
                     });
-                    if (!siRes.ok) throw new Error('Could not create setup intent');
+                    if (!siRes.ok) {
+                        let errMsg = 'Could not create setup intent';
+                        try { const errObj = await siRes.json(); if (errObj.error) errMsg = errObj.error; } catch (e) { }
+                        throw new Error(errMsg);
+                    }
                     const { clientSecret } = await siRes.json();
 
                     // ── 3. Mount Stripe Elements ──────────────────────────
