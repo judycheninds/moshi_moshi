@@ -231,12 +231,15 @@ app.get('/api/reservations', authMiddleware, async (req, res) => {
 // GET /api/user/billing
 app.get('/api/user/billing', authMiddleware, async (req, res) => {
     try {
+        const customerId = await getStripeCustomerId(req.user.email, req.user.name);
+        if (!customerId) return res.json({ paymentMethods: [] });
+
         // --- MOCK TEST CARD FOR JENSEN ---
-        if (req.user.email === 'judychen1203@gmail.com' || req.user.email.endsWith('@test.com')) {
+        if (req.user.email === 'judychen1203@gmail.com') {
             return res.json({
                 paymentMethods: [{
                     id: 'pm_mock_jensen_test_visa',
-                    name: 'Test Account Details',
+                    name: 'Jensen (Test Account)',
                     brand: 'visa',
                     last4: '4242',
                     exp_month: 12,
@@ -245,9 +248,6 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
             });
         }
         // ---------------------------------
-
-        const customerId = await getStripeCustomerId(req.user.email, req.user.name);
-        if (!customerId) return res.json({ paymentMethods: [] });
 
         const paymentMethods = await stripe.paymentMethods.list({
             customer: customerId,
@@ -275,7 +275,7 @@ app.get('/api/user/billing', authMiddleware, async (req, res) => {
 app.get('/api/stripe-key', authMiddleware, (req, res) => {
     let pk = process.env.STRIPE_PUBLISHABLE_KEY;
     // --- MOCK TEST CARD FOR JENSEN ---
-    if (!pk && (req.user.email === 'judychen1203@gmail.com' || req.user.email.endsWith('@test.com'))) {
+    if (!pk && req.user.email === 'judychen1203@gmail.com') {
         pk = 'pk_test_mock_jensen_123';
     }
     // ---------------------------------
@@ -286,7 +286,7 @@ app.get('/api/stripe-key', authMiddleware, (req, res) => {
 app.post('/api/user/setup-intent', authMiddleware, async (req, res) => {
     try {
         // --- MOCK TEST CARD FOR JENSEN ---
-        if (req.user.email === 'judychen1203@gmail.com' || req.user.email.endsWith('@test.com')) {
+        if (req.user.email === 'judychen1203@gmail.com') {
             return res.json({ clientSecret: 'seti_mock_123_secret_mock_123', customerId: 'cus_mock_jensen' });
         }
         // ---------------------------------
@@ -1252,23 +1252,56 @@ app.post('/twilio/call-status', async (req, res) => {
                 broadcastLog(callSid, 'system', `💳 Reservation successful. Attempting to charge $5 service fee…`);
 
                 try {
-                    // Stripe configuration check bypassed for global test simulation
+                    if (!stripe) throw new Error('Stripe not configured');
+
                     // We must fetch the user to get their email, since this runs in a callback without req.user
                     const { data: user } = await supabase.from('users').select('email, name').eq('id', callState.userId).single();
                     if (!user?.email) throw new Error('Could not find user info');
 
-                    // --- GLOBAL STRIPE OVERRIDE FOR ALL TEST ACCOUNTS ---
-                    // Since Live Stripe API relies on tokenization, we bypass it
-                    // globally for this project to strictly simulate a successful charge.
-                    let isMockedCard = true;
-                    let paymentMethodToUse = 'pm_mock_visa_override';
+                    let customerId = null;
+                    let paymentMethodToUse = null;
+                    let isMockedCard = false;
 
-                    if (isMockedCard) {
-                        depositResult.charged = true;
-                        depositResult.chargeId = 'ch_mock_' + Math.random().toString(36).substr(2, 9);
-                        broadcastLog(callSid, 'system', `💳 Success! Charged $5 service fee to ${paymentMethodToUse}`);
+                    // --- MOCK TEST CARD FOR JENSEN ---
+                    if (user.email === 'judychen1203@gmail.com') {
+                        customerId = 'cus_mock_jensen';
+                        paymentMethodToUse = 'pm_mock_jensen_test_visa';
+                        isMockedCard = true;
+                    } else {
+                        customerId = await getStripeCustomerId(user.email, user.name);
+                        if (!customerId) throw new Error('No mapping to stripe account');
+
+                        if (stripe) {
+                            const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
+                            paymentMethodToUse = pms.data.length ? pms.data[0].id : null;
+                        }
                     }
-                    // ----------------------------------------------------
+
+                    if (!paymentMethodToUse) throw new Error('No payment method found');
+
+                    let pi = { status: 'failed' };
+                    if (isMockedCard) {
+                        // Simulate a successful Stripe charge for Jensen's mock card
+                        pi.status = 'succeeded';
+                    } else {
+                        pi = await stripe.paymentIntents.create({
+                            amount: serviceFeeAmt,
+                            currency: 'usd',
+                            customer: customerId,
+                            payment_method: paymentMethodToUse,
+                            off_session: true,
+                            confirm: true,
+                            description: `Service fee for reservation at ${callState.restaurantPhone} on ${callState.rawDate}`
+                        });
+                    }
+
+                    if (pi.status === 'succeeded') {
+                        depositResult.charged = true;
+                        broadcastLog(callSid, 'system', `✅ Service fee of $${(serviceFeeAmt / 100).toFixed(2)} charged successfully.`);
+                    } else {
+                        depositResult.error = `Payment status: ${pi.status}`;
+                        broadcastLog(callSid, 'system', `⚠️ Service fee charge incomplete: ${pi.status}`);
+                    }
                 } catch (depErr) {
                     depositResult.error = depErr.message;
                     broadcastLog(callSid, 'system', `⚠️ Service fee charge failed: ${depErr.message}`);
