@@ -1232,11 +1232,12 @@ app.post('/twilio/call-status', async (req, res) => {
             const isSuccess = evalResult.success === true;
             const statusType = isSuccess ? 'success' : (evalResult.alternatives ? 'alternative' : 'failed');
 
-            // ── Deposit Handling ──────────────────────────────────────────────
+            // ── Service Fee Handling ──────────────────────────────────────────
             let depositResult = null;
-            if (evalResult.depositRequested && isSuccess) {
-                depositResult = { requested: true, amount: evalResult.depositAmount || null, currency: 'usd', charged: false, error: null };
-                broadcastLog(callSid, 'system', `💳 Restaurant requested a deposit. Attempting to charge card…`);
+            if (isSuccess) {
+                const serviceFeeAmt = 500; // $5.00
+                depositResult = { requested: true, amount: serviceFeeAmt, currency: 'usd', charged: false, error: null };
+                broadcastLog(callSid, 'system', `💳 Reservation successful. Attempting to charge $5 service fee…`);
 
                 try {
                     if (!stripe) throw new Error('Stripe not configured');
@@ -1260,34 +1261,32 @@ app.post('/twilio/call-status', async (req, res) => {
 
                     if (!paymentMethodToUse) throw new Error('No payment method found');
 
-                    const depositAmt = evalResult.depositAmount || 1000; // default $10 if amount unknown
-
                     let pi = { status: 'failed' };
                     if (isMockedCard) {
                         // Simulate a successful Stripe charge for Jensen's mock card
                         pi.status = 'succeeded';
                     } else {
                         pi = await stripe.paymentIntents.create({
-                            amount: depositAmt,
+                            amount: serviceFeeAmt,
                             currency: 'usd',
                             customer: customerId,
                             payment_method: paymentMethodToUse,
                             off_session: true,
                             confirm: true,
-                            description: `Restaurant deposit for ${callState.restaurantPhone} on ${callState.rawDate}`
+                            description: `Service fee for reservation at ${callState.restaurantPhone} on ${callState.rawDate}`
                         });
                     }
 
                     if (pi.status === 'succeeded') {
                         depositResult.charged = true;
-                        broadcastLog(callSid, 'system', `✅ Deposit of $${(depositAmt / 100).toFixed(2)} charged successfully.`);
+                        broadcastLog(callSid, 'system', `✅ Service fee of $${(serviceFeeAmt / 100).toFixed(2)} charged successfully.`);
                     } else {
                         depositResult.error = `Payment status: ${pi.status}`;
-                        broadcastLog(callSid, 'system', `⚠️ Deposit charge incomplete: ${pi.status}`);
+                        broadcastLog(callSid, 'system', `⚠️ Service fee charge incomplete: ${pi.status}`);
                     }
                 } catch (depErr) {
                     depositResult.error = depErr.message;
-                    broadcastLog(callSid, 'system', `⚠️ Deposit charge failed: ${depErr.message}`);
+                    broadcastLog(callSid, 'system', `⚠️ Service fee charge failed: ${depErr.message}`);
                 }
             }
             // ── End Deposit ──────────────────────────────────────────────────
