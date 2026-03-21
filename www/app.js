@@ -1033,13 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .replace('{dateStr}', dateStr)
                     .replace('{time}', finalTime);
 
-                if (userPhone) {
-                    fetch('https://moshi-moshi-8dh6.onrender.com/api/send-sms', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userName, userPhone, date: dateStr, time: finalTime, people })
-                    }).then(() => console.log('SMS confirmation sent!'));
-                }
+
             } else if (isAlternative) {
                 resultStatusIcon.className = 'result-icon alternative';
                 resultStatusIcon.innerHTML = '<i class="fa-solid fa-calendar-day"></i>';

@@ -1354,54 +1354,7 @@ app.post('/twilio/call-status', async (req, res) => {
 });
 
 
-// ==========================================
-// 3. SMS CONFIRMATION
-// ==========================================
-app.post('/api/send-sms', async (req, res) => {
-    let { userName, userPhone, date, time, people, language } = req.body;
 
-    const formatPhone = (ph, langStr) => {
-        if (!ph) return ph;
-        let digits = String(ph).replace(/\D/g, '');
-        if (!digits) return ph;
-
-        if (String(ph).trim().startsWith('+')) {
-            return '+' + digits;
-        }
-
-        const langInfo = langStr ? langStr.toLowerCase() : '';
-        const isTaiwan = langInfo.includes('tw') || langInfo.includes('hant') || langInfo === 'zh';
-        const defaultCode = isTaiwan ? '886' : '81';
-
-        // If it looks like a US number
-        if (digits.startsWith('1') && digits.length === 11) return '+' + digits;
-        if (digits.length === 10 && !digits.startsWith('0')) return '+1' + digits;
-
-        if (digits.startsWith('886') && digits.length > 10) return '+' + digits;
-        if (digits.startsWith('81') && digits.length > 9) return '+' + digits;
-
-        if (digits.startsWith('0')) return `+${defaultCode}${digits.substring(1)}`;
-        return `+${defaultCode}${digits}`;
-    };
-
-    userPhone = formatPhone(userPhone, language || 'en-US');
-
-    if (!twilioClient) {
-        return res.status(500).json({ error: 'Twilio Client not initialized.' });
-    }
-
-    try {
-        await twilioClient.messages.create({
-            body: `Moshi Moshi ${userName}! 🍱 Your table for ${people} on ${date} at ${time} is officially confirmed!`,
-            from: process.env.TWILIO_PHONE_NUMBER,
-            to: userPhone
-        });
-        res.json({ success: true });
-    } catch (err) {
-        console.error("SMS Error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
