@@ -366,6 +366,9 @@ async function placeCall({ phone, date, time, altTime1, altTime2, people, langua
         url: `${publicUrl}/twilio/voice?stateId=${stateId}`,
         statusCallback: `${publicUrl}/twilio/call-status?stateId=${stateId}`,
         statusCallbackEvent: ['completed', 'no-answer', 'busy', 'failed'],
+        machineDetection: 'Enable',
+        asyncAmd: 'true',
+        asyncAmdStatusCallback: `${publicUrl}/twilio/call-status?stateId=${stateId}`,
         to: phone,
         from: process.env.TWILIO_PHONE_NUMBER
     });
@@ -617,7 +620,10 @@ app.post('/api/real-call', authMiddleware, callLimiter, async (req, res) => {
         const call = await twilioClient.calls.create({
             url: `${publicUrl}/twilio/voice?stateId=${stateId}`,
             statusCallback: `${publicUrl}/twilio/call-status?stateId=${stateId}`,
-            statusCallbackEvent: ['completed'],
+            statusCallbackEvent: ['completed', 'no-answer', 'busy', 'failed'],
+            machineDetection: 'Enable',
+            asyncAmd: 'true',
+            asyncAmdStatusCallback: `${publicUrl}/twilio/call-status?stateId=${stateId}`,
             to: phone,
             from: process.env.TWILIO_PHONE_NUMBER
         });
@@ -966,11 +972,20 @@ app.post('/twilio/gather-result', async (req, res) => {
 // Twilio calls this when the physical phone call disconnects
 app.post('/twilio/call-status', async (req, res) => {
     const callSid = req.body.CallSid;
-    const callStatus = req.body.CallStatus;
+    let callStatus = req.body.CallStatus;
+    const answeredBy = req.body.AnsweredBy;
     const stateId = req.query.stateId;
     const callState = activeCalls.get(stateId) || activeCalls.get(callSid);
 
     if (!callState) { res.sendStatus(200); return; }
+
+    // ── ANSWERING MACHINE DETECTION (AMD) ──────────────────────────────────
+    // If Twilio AMD detects an automated voicemail, instantly hang up and trigger retry.
+    if (answeredBy && answeredBy.startsWith('machine')) {
+        console.log(`📠 AMD Detected Voicemail on ${callSid}. Hanging up and retrying...`);
+        try { await twilioClient.calls(callSid).update({ status: 'completed' }); } catch (e) { }
+        callStatus = 'busy'; // Override status to force it through the busy/retry loop!
+    }
 
     const MAX_ATTEMPTS = 3;
     const RETRY_DELAY_MS = 30 * 1000; // 30 seconds between retries
