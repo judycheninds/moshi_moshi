@@ -9,6 +9,29 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ---- Google Places API Integration ----
+    const searchInput = document.getElementById('restaurantSearch');
+    const phoneInput = document.getElementById('phone');
+    if (searchInput && typeof google !== 'undefined' && google.maps && google.maps.places) {
+        const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+            fields: ['name', 'formatted_phone_number']
+        });
+        autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (place.formatted_phone_number) {
+                if (phoneInput) {
+                    phoneInput.value = place.formatted_phone_number;
+                    // Flash animation to show it was autofilled
+                    phoneInput.classList.remove('autofill-flash');
+                    void phoneInput.offsetWidth; // trigger reflow
+                    phoneInput.classList.add('autofill-flash');
+                }
+            } else {
+                alert("Google Maps could not find a phone number for " + (place.name || "this location") + ".");
+            }
+        });
+    }
+
     // ---- Navbar elements ----
     const navbar = document.getElementById('navbar');
     const loginBtn = document.getElementById('loginBtn');

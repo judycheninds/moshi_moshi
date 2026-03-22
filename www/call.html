@@ -101,6 +101,13 @@
                             </div>
 
                             <div class="form-group">
+                                <label for="restaurantSearch"><i class="fa-solid fa-magnifying-glass"></i> <span
+                                        data-i18n="label-search">Search Restaurant</span></label>
+                                <input type="text" id="restaurantSearch"
+                                    placeholder="Type a name, e.g. Sushi Saito Tokyo" autocomplete="off">
+                            </div>
+
+                            <div class="form-group">
                                 <label for="phone"><i class="fa-solid fa-phone"></i> <span
                                         data-i18n="label-phone">Restaurant Phone Number</span></label>
                                 <input type="tel" id="phone" placeholder="+81 3-XXXX-XXXX" required>
@@ -511,6 +518,8 @@
         </div>
     </div>
 
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAXeUVSqITxT_9j1c_ZhzJ0qLrKmbk37dU&libraries=places"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="i18n.js?v=1.5"></script>
     <script src="app.js?v=2.9"></script>
