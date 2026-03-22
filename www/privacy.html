@@ -5,14 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy - MoshiMoshi</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .policy-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 100px auto 50px;
-            padding: 2rem;
+            padding: 3rem 2.5rem;
             background: var(--card-bg);
             border-radius: var(--border-radius);
             backdrop-filter: blur(10px);
@@ -20,100 +20,133 @@
         }
 
         .policy-container h1 {
-            font-weight: 600;
-            margin-bottom: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
             color: #fff;
+            font-size: 2.2rem;
         }
 
         .policy-container h2 {
-            font-weight: 500;
-            font-size: 1.25rem;
-            margin-top: 2rem;
+            font-weight: 600;
+            font-size: 1.4rem;
+            margin-top: 2.5rem;
             margin-bottom: 1rem;
             color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
         }
 
         .policy-container p,
         .policy-container li {
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.75);
+            line-height: 1.8;
             margin-bottom: 1rem;
+            font-size: 0.95rem;
         }
 
         .policy-container ul {
             padding-left: 20px;
         }
+
+        .legal-shout {
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #ea2e49;
+        }
     </style>
 </head>
 
 <body>
-
-    <!-- Nav -->
     <nav>
         <div class="container nav-content">
-            <a href="index.html" class="logo">
-                <i class="fa-solid fa-phone-volume"></i> Moshi<span class="highlight">Moshi</span>
-            </a>
-            <div class="nav-links">
-                <a href="index.html"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
-            </div>
+            <a href="index.html" class="logo"><i class="fa-solid fa-phone-volume"></i> Moshi<span
+                    class="highlight">Moshi</span></a>
+            <div class="nav-links"><a href="index.html"><i class="fa-solid fa-arrow-left"></i> Back to Home</a></div>
         </div>
     </nav>
 
     <main class="container">
         <div class="policy-container">
             <h1>Privacy Policy</h1>
-            <p>Last updated: March 2026</p>
+            <p><strong>Effective Date: March 22, 2026</strong></p>
+            <p>Your privacy is important to us. This Comprehensive Privacy Policy ("Policy") describes how MoshiMoshi
+                ("we," "our," or "us") collects, uses, shares, and protects your information when you use our website,
+                mobile application, and AI reservation services.</p>
 
             <h2>1. Information We Collect</h2>
-            <p>We collect information that you provide securely, including your name, email address, phone number, and
-                encrypted payment information used to process service fees.</p>
+            <p>We collect various types of information to provide our Service securely and efficiently:</p>
+            <ul>
+                <li><strong>Account Information:</strong> Name, email address, password Hash, and mobile phone number.
+                </li>
+                <li><strong>Reservation Data:</strong> Dates, party sizes, guest names, dietary restrictions given to
+                    the AI, and targeted restaurant details.</li>
+                <li><strong>Financial Information:</strong> We do NOT store full credit card numbers. Payment processing
+                    is routed securely through Stripe, Inc., which issues us an encrypted token to facilitate billing
+                    and deposits.</li>
+                <li><strong>Automated & Device Information:</strong> IP addresses, browser types, operating systems,
+                    mobile device identifiers, crash data, and usage logs tracked via cookies and similar technologies.
+                </li>
+            </ul>
 
-            <h2>2. How We Use Your Information</h2>
-            <p>We use your information strictly to provide and improve the MoshiMoshi concierge telephony service. Your
-                phone number is used to relay booking outcomes via SMS, and your payment details are securely tokenized
-                using Stripe. We do NOT store your credit card information directly on our servers.</p>
+            <h2>2. Explicit Consent to Artificial Intelligence Processing</h2>
+            <p>Because MoshiMoshi relies on sophisticated AI technology to make telephone calls, you <span
+                    class="legal-shout">explicitly consent</span> to the following:</p>
+            <ul>
+                <li><strong>Voice and Text Processing:</strong> Your prompts, names, and booking details are transmitted
+                    to third-party Large Language Model providers (including Google and OpenAI) to formulate
+                    conversational agent dialogues.</li>
+                <li><strong>Call Recording:</strong> While live voice audio from telephone calls is generally processed
+                    in real-time, text transcriptions of the conversations are logged and retained temporarily for the
+                    sole purpose of ensuring reservation accuracy and debugging system failures.</li>
+            </ul>
 
-            <h2>3. AI Processing & Recordings</h2>
-            <p>By using the platform, you acknowledge that conversations with restaurants are processed using artificial
-                intelligence models. Transcripts are temporarily retained strictly to evaluate reservation success and
-                troubleshoot failures. Voice recordings are processed in real-time and are never stored.</p>
+            <h2>3. How We Use Your Information</h2>
+            <p>We use your data strictly to: (a) Fulfill reservations and communicate on your behalf; (b) Transmit SMS
+                updates regarding booking success; (c) Process recurring or one-time payments; (d) Analyze telemetry to
+                improve our AI models; (e) Detect fraud, abuse, and security vulnerabilities.</p>
 
             <h2>4. Third-Party Sharing</h2>
-            <p>We do not share or sell your personal information. We only share strictly necessary reservation details
-                (Names and Phone Numbers) with the restaurant being booked.</p>
+            <p>We do not sell your personal data to data brokers. We share your information only under these
+                circumstances:</p>
+            <ul>
+                <li><strong>Restaurants:</strong> We must share your name, phone number, and party details with the
+                    restaurant you instruct us to call.</li>
+                <li><strong>Service Providers:</strong> Payment processors (Stripe), cloud infrastructure providers
+                    (Supabase, Google Cloud), and telephony providers (Twilio).</li>
+                <li><strong>Legal Requirements:</strong> We will disclose your data if subpoenaed by law enforcement, or
+                    to defend against legal claims directed at MoshiMoshi.</li>
+            </ul>
 
-            <h2>5. Data Rights (GDPR & CCPA)</h2>
-            <p>Depending on your location, you may have the right to access, delete, or modify your personal
-                information. You can request the deletion of your account and all associated data at any time by
-                contacting support. We will comply with all verifiable requests within 30 days.</p>
+            <h2>5. International Data Transfers</h2>
+            <p>MoshiMoshi operates globally. By using the Service, you consent to the transfer of your data from your
+                country of residence to servers located in the United States and Japan, which may have different data
+                protection laws than your home jurisdiction.</p>
 
-            <h2>6. Data Retention</h2>
-            <p>We retain your account information only as long as your account is active. Call transcripts and
-                conversational logs used to train our systems are automatically anonymized or purged after 90 days.</p>
+            <h2>6. Data Rights (GDPR, CCPA, CPRA)</h2>
+            <p>Depending on your jurisdiction (e.g., California residents under CCPA/CPRA, or European Economic Area
+                residents under GDPR), you possess specific rights regarding your personal data. You have the right to
+                request access to, deletion of, or correction of your personal data. To execute a verifiable data
+                subject request, please email support@moshimoshicall.com. We require 30 to 45 days to comply with
+                authenticated requests.</p>
 
-            <h2>7. Children's Privacy</h2>
-            <p>MoshiMoshi is not intended for use by children under the age of 18 or the legal age of majority in your
-                jurisdiction. We do not knowingly collect personal information from children.</p>
+            <h2>7. Security Exclusions</h2>
+            <p>While we implement robust, industry-standard encryption protocols, no method of transmission over the
+                Internet is 100% secure. <span class="legal-shout">WE CANNOT AND DO NOT GUARANTEE THE ABSOLUTE SECURITY
+                    OF YOUR DATA. ANY TRANSMISSION IS AT YOUR OWN RISK.</span></p>
 
-            <h2>5. Contact Us</h2>
-            <p>If you have any questions regarding this Privacy Policy, please contact us at support@moshimoshicall.com.
-            </p>
+            <h2>8. Children's Privacy (COPPA)</h2>
+            <p>Our Service is strictly not directed to individuals under the age of 18. We do not knowingly collect
+                personal information from children. If we become aware that we have inadvertently collected such data,
+                we will immediately purge it from our systems without notice.</p>
         </div>
     </main>
 
-    <!-- Footer -->
     <footer>
         <div class="container footer-content">
             <div class="footer-brand">
-                <a href="index.html" class="logo">
-                    <i class="fa-solid fa-phone-volume"></i> Moshi<span class="highlight">Moshi</span>
-                </a>
+                <a href="index.html" class="logo"><i class="fa-solid fa-phone-volume"></i> Moshi<span
+                        class="highlight">Moshi</span></a>
                 <p>Bridging the language gap for authentic dining experiences.</p>
-                <p style="opacity: 0.6; font-size: 0.85rem; margin-top: 1rem; max-width: 600px;">Disclaimer: MoshiMoshi
-                    acts exclusively as a translation and phone assistant tool. We do not guarantee reservation success
-                    and are not liable for any failed bookings, restaurant cancellations, or disputes arising from the
-                    reservation process.</p>
             </div>
             <div class="footer-links">
                 <a href="privacy.html">Privacy Policy</a>
@@ -122,7 +155,6 @@
             </div>
         </div>
     </footer>
-
 </body>
 
 </html>

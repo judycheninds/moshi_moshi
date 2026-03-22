@@ -5,14 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms of Service - MoshiMoshi</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .policy-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 100px auto 50px;
-            padding: 2rem;
+            padding: 3rem 2.5rem;
             background: var(--card-bg);
             border-radius: var(--border-radius);
             backdrop-filter: blur(10px);
@@ -20,102 +20,166 @@
         }
 
         .policy-container h1 {
-            font-weight: 600;
-            margin-bottom: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
             color: #fff;
+            font-size: 2.2rem;
         }
 
         .policy-container h2 {
-            font-weight: 500;
-            font-size: 1.25rem;
-            margin-top: 2rem;
+            font-weight: 600;
+            font-size: 1.4rem;
+            margin-top: 2.5rem;
             margin-bottom: 1rem;
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .policy-container h3 {
+            font-weight: 500;
+            font-size: 1.1rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
             color: #fff;
         }
 
         .policy-container p,
         .policy-container li {
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.75);
+            line-height: 1.8;
             margin-bottom: 1rem;
+            font-size: 0.95rem;
         }
 
         .policy-container ul {
             padding-left: 20px;
         }
+
+        .legal-shout {
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #ea2e49;
+            display: block;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 
 <body>
-
-    <!-- Nav -->
     <nav>
         <div class="container nav-content">
-            <a href="index.html" class="logo">
-                <i class="fa-solid fa-phone-volume"></i> Moshi<span class="highlight">Moshi</span>
-            </a>
-            <div class="nav-links">
-                <a href="index.html"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
-            </div>
+            <a href="index.html" class="logo"><i class="fa-solid fa-phone-volume"></i> Moshi<span
+                    class="highlight">Moshi</span></a>
+            <div class="nav-links"><a href="index.html"><i class="fa-solid fa-arrow-left"></i> Back to Home</a></div>
         </div>
     </nav>
 
     <main class="container">
         <div class="policy-container">
             <h1>Terms of Service</h1>
-            <p>Last updated: March 2026</p>
+            <p><strong>Effective Date: March 22, 2026</strong></p>
+            <p><strong>PLEASE READ THESE TERMS CAREFULLY. THEY CONTAIN A STRICT BINDING ARBITRATION CLAUSE AND A CLASS
+                    ACTION WAIVER THAT AFFECT YOUR LEGAL RIGHTS.</strong></p>
 
-            <h2>1. Service Overview</h2>
-            <p>MoshiMoshi provides an AI-powered automated translation and phone booking concierge. By using our
-                service, you agree to these Terms of Service.</p>
+            <h2>1. Acceptance of Terms</h2>
+            <p>By accessing, registering for, downloading, or using the MoshiMoshi platform, website, mobile
+                application, or AI-powered concierge services (collectively, the "Service"), you agree to be bound by
+                these Terms of Service ("Terms") and our Privacy Policy. If you do not agree, you must immediately cease
+                all use of the Service. You represent that you are at least 18 years of age and legally competent to
+                enter into this agreement.</p>
 
-            <h2>2. Limitation of Liability</h2>
-            <p><strong>Disclaimer:</strong> MoshiMoshi acts exclusively as a communication assistant. IN NO EVENT SHALL
-                MOSHIMOSHI BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE DAMAGES. We do not
-                guarantee or warrant that any reservation attempt will be successful. We are not liable or responsible
-                for failed reservations, restaurant cancellations, double-bookings, incorrect availability, or any
-                damages/disputes arising between the user and the restaurant.</p>
-
-            <h2>3. No Warranties ("As Is" Basis)</h2>
-            <p>Our service and software are provided on an "AS IS" and "AS AVAILABLE" basis. MoshiMoshi expressly
-                disclaims all warranties of any kind, whether express or implied, including but not limited to the
-                implied warranties of merchantability, fitness for a particular purpose, and non-infringement.</p>
-
-            <h2>4. Indemnification</h2>
-            <p>You agree to defend, indemnify, and hold harmless MoshiMoshi, its affiliates, contractors, and funders
-                from and against any claims, damages, obligations, losses, liabilities, costs, or debt arising from your
-                use of the Service or your violation of these Terms.</p>
-
-            <h2>5. Service Fees and Billing</h2>
-            <p>A non-refundable service fee is charged explicitly upon the successful booking of a reservation, as
-                verified by our conversational assessment systems. By providing payment details, you authorize us to
-                charge this service fee automatically using Stripe.</p>
-
-            <h2>6. Dispute Resolution & Binding Arbitration</h2>
-            <p>Any dispute, claim, or controversy arising out of or relating to these Terms or the breach, termination,
-                enforcement, interpretation, or validity thereof, shall be determined by binding arbitration rather than
-                in court. You agree to waive your right to participate in any class action lawsuit against MoshiMoshi.
+            <h2>2. The Service & Assumption of AI Risk</h2>
+            <p>MoshiMoshi operates an artificial intelligence software service designed to place outbound telephone
+                calls and negotiate restaurant reservations on your behalf. You acknowledge and explicitly agree that:
             </p>
+            <ul>
+                <li><strong>AI Unpredictability:</strong> The Service utilizes third-party Large Language Models (LLMs)
+                    and Text-to-Speech (TTS) systems which may hallucinate, misinterpret instructions, or provide
+                    inaccurate information to you or third parties. </li>
+                <li><strong>No Guarantee of Booking:</strong> MoshiMoshi does not guarantee that any reservation attempt
+                    will be successful, accepted by the restaurant, or accurately recorded.</li>
+                <li><strong>Financial Risk for "No-Shows":</strong> If the AI secures a reservation and you fail to
+                    attend, or if the AI secures the wrong time/date and you are penalized by the restaurant,
+                    <strong>MoshiMoshi is strictly not liable for any cancellation fees, penalties, deposits, or
+                        subsequent travel costs incurred.</strong></li>
+            </ul>
 
-            <h2>7. Accuracy of Information</h2>
-            <p>You agree to provide accurate phone numbers, names, and contact details. Misuse of the platform,
-                including booking spam, fake names, or harassment of restaurant employees via the AI agent, will result
-                in immediate termination of an account.</p>
+            <h2>3. Disclaimers and No Warranties</h2>
+            <span class="legal-shout">TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SERVICE IS PROVIDED "AS IS"
+                AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED. MOSHIMOSHI EXPRESSLY
+                DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
+                FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE
+                UNINTERRUPTED, ERROR-FREE, SECURE, OR ACCURATE.</span>
+
+            <h2>4. Limitation of Liability</h2>
+            <span class="legal-shout">IN NO EVENT SHALL MOSHIMOSHI, ITS FOUNDERS, DIRECTORS, EMPLOYEES, AFFILIATES, OR
+                FUNDERS BE LIABLE TO YOU OR ANY THIRD PARTY FOR ANY INDIRECT, CONSEQUENTIAL, EXEMPLARY, INCIDENTAL,
+                SPECIAL, OR PUNITIVE DAMAGES, INCLUDING LOST PROFITS, LOST DATA, TRAVEL EXPENSES, OR EMOTIONAL DISTRESS
+                ARISING OUT OF YOUR USE OF THE SERVICE, EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH
+                DAMAGES.</span>
+            <span class="legal-shout">NOTWITHSTANDING ANYTHING TO THE CONTRARY CONTAINED HEREIN, MOSHIMOSHI’S TOTAL
+                LIABILITY TO YOU FOR ANY CAUSE WHATSOEVER AND REGARDLESS OF THE FORM OF THE ACTION, WILL AT ALL TIMES BE
+                LIMITED TO THE GREATER OF (A) THE AMOUNT ACTUALLY PAID BY YOU TO MOSHIMOSHI IN THE THREE (3) MONTHS
+                PRIOR TO THE ACCRUAL OF THE CLAIM, OR (B) FIFTY US DOLLARS ($50.00).</span>
+
+            <h2>5. Indemnification</h2>
+            <p>You agree to fully defend, indemnify, and hold harmless MoshiMoshi, its affiliates, investors, and
+                licensors from and against any claims, liabilities, damages, judgments, awards, losses, costs, expenses,
+                or fees (including reasonable attorneys' fees) arising out of or relating to: (a) your violation of
+                these Terms; (b) your use, or misuse, of the Service; (c) your violation of any third-party right,
+                including any intellectual property or privacy right; or (d) any dispute between you and a restaurant or
+                third party regarding a booking, refund, or deposit.</p>
+
+            <h2>6. Dispute Resolution, Arbitration, and Class Action Waiver</h2>
+            <p><strong>Please read this section carefully. It affects your legal rights and governs how disputes are
+                    resolved.</strong></p>
+            <ul>
+                <li><strong>Binding Arbitration:</strong> Any and all disputes, claims, or controversies arising out of
+                    or relating to these Terms or the breach, termination, enforcement, interpretation, or validity
+                    thereof shall be settled exclusively by final and binding individual arbitration, rather than in
+                    court.</li>
+                <li><strong>Class Action Waiver:</strong> YOU AND MOSHIMOSHI AGREE THAT EACH MAY BRING CLAIMS AGAINST
+                    THE OTHER ONLY IN YOUR OR ITS INDIVIDUAL CAPACITY, AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY
+                    PURPORTED CLASS, CONSOLIDATED, OR REPRESENTATIVE PROCEEDING.</li>
+                <li><strong>No Jury Trial:</strong> If for any reason a claim proceeds in court rather than in
+                    arbitration, we each waive any right to a jury trial.</li>
+            </ul>
+
+            <h2>7. Prohibited Conduct</h2>
+            <p>You agree not to: (a) Use the AI agent to harass, spoof, prank call, or otherwise abuse businesses or
+                individuals; (b) Provide false identities or fraudulent payment details; (c) Reverse engineer,
+                decompile, or attempt to extract the source code of the Service; (d) Use the platform in any manner that
+                violates applicable local, state, or international laws.</p>
+
+            <h2>8. Service Fees, Payments, and No Refunds</h2>
+            <p>All fees paid for successful bookings, subscriptions, or credit packages are strictly non-refundable
+                under any circumstances. If a restaurant cancels your reservation after our AI has successfully
+                completed the booking, MoshiMoshi is under no obligation to refund the service fee.</p>
+
+            <h2>9. Termination</h2>
+            <p>We may suspend or terminate your account and your access to the Service at any time, for any reason,
+                without notice or liability to you.</p>
+
+            <h2>10. Governing Law</h2>
+            <p>These Terms shall be governed by and construed in accordance with the laws of the State of Delaware,
+                United States, without giving effect to any principles of conflicts of law.</p>
+
+            <p style="margin-top:2rem;"><em>By checking the terms box upon account creation or utilizing the MoshiMoshi
+                    application, you acknowledge that you have read, understood, and agree to be bound by these Terms of
+                    Service in their entirety forever.</em></p>
         </div>
     </main>
 
-    <!-- Footer -->
     <footer>
         <div class="container footer-content">
             <div class="footer-brand">
-                <a href="index.html" class="logo">
-                    <i class="fa-solid fa-phone-volume"></i> Moshi<span class="highlight">Moshi</span>
-                </a>
+                <a href="index.html" class="logo"><i class="fa-solid fa-phone-volume"></i> Moshi<span
+                        class="highlight">Moshi</span></a>
                 <p>Bridging the language gap for authentic dining experiences.</p>
-                <p style="opacity: 0.6; font-size: 0.85rem; margin-top: 1rem; max-width: 600px;">Disclaimer: MoshiMoshi
-                    acts exclusively as a translation and phone assistant tool. We do not guarantee reservation success
-                    and are not liable for any failed bookings, restaurant cancellations, or disputes arising from the
-                    reservation process.</p>
             </div>
             <div class="footer-links">
                 <a href="privacy.html">Privacy Policy</a>
@@ -124,7 +188,6 @@
             </div>
         </div>
     </footer>
-
 </body>
 
 </html>
