@@ -323,7 +323,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isSignUpMode) {
                 const name = document.getElementById('modal-name')?.value.trim() || '';
                 const phone = document.getElementById('modal-userPhone')?.value.trim() || '';
+                const termsChecked = document.getElementById('termsCheckbox')?.checked;
                 if (!name) { showModalError('Please enter your name.'); modalSubmitBtn.disabled = false; modalSubmitBtn.innerHTML = originalText; return; }
+                if (!termsChecked) { showModalError('You must agree to the Terms of Service and Privacy Policy.'); modalSubmitBtn.disabled = false; modalSubmitBtn.innerHTML = originalText; return; }
                 const res = await fetch(`${API}/api/auth/register`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password, name, phone })
